@@ -1,0 +1,28 @@
+{
+  "name": "cgv_game_project",
+  "version": "1.0.0",
+  "description": "A projet for Computer graphics and visualisations (CGV) to develop a 3D game in three.js",
+  "main": "index.js",
+  "source": "threejs_test/index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "parcel",
+    "start-test": "parcel threejs_test/index.html",
+    "setup-install": "npm install && npm install three && npm install parcel"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CiaranOtter/CGV_game_project.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/CiaranOtter/CGV_game_project/issues"
+  },
+  "homepage": "https://github.com/CiaranOtter/CGV_game_project#readme",
+  "dependencies": {
+    "parcel": "^2.5.0",
+    "three": "^0.139.2"
+  }
+}
