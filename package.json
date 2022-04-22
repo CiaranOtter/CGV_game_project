@@ -8,7 +8,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "parcel",
     "start-test": "parcel threejs_test/index.html",
-    "setup-install": "npm install && npm install three && npm install parcel"
+    "setup-install": "npm install && npm install --save-dev three && npm install parcel"
   },
   "repository": {
     "type": "git",
