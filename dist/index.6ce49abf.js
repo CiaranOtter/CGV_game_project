@@ -526,10 +526,17 @@ function hmrAcceptRun(bundle, id) {
 }
 
 },{}],"8YfsX":[function(require,module,exports) {
+const { BooleanKeyframeTrack  } = require("three");
 const THREE = require("three");
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer();
+let rightPressed = false;
+let leftPressed = false;
+let Downpressed = false;
+let Uppressed = false;
+let jumping = false;
+let jumpSpeed = 0.05;
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.append(renderer.domElement);
 const geometry = new THREE.BoxGeometry();
@@ -543,8 +550,61 @@ function animate() {
     requestAnimationFrame(animate);
     cube.rotation.x += 0.01;
     cube.rotation.y += 0.01;
+    if (Downpressed) camera.position.z += 0.05;
+    if (Uppressed) camera.position.z -= 0.05;
+    if (leftPressed) camera.position.x -= 0.05;
+    if (rightPressed) camera.position.x += 0.05;
+    if (jumping) {
+        camera.position.y += jumpSpeed;
+        jumpSpeed = jumpSpeed - 0.002;
+        console.log("jumpSpeed is:" + jumpSpeed);
+        if (jumpSpeed <= -0.05) {
+            jumping = false;
+            jumpSpeed = 0.05;
+            camera.position.y = 0;
+        }
+    }
+    console.log(camera.position.y);
     renderer.render(scene, camera);
 }
+document.addEventListener('keydown', (e)=>{
+    codeValue = e.code;
+    console.log(codeValue);
+    switch(codeValue){
+        case "KeyW":
+            Uppressed = true;
+            break;
+        case "KeyS":
+            Downpressed = true;
+            break;
+        case "KeyA":
+            leftPressed = true;
+            break;
+        case "KeyD":
+            rightPressed = true;
+            break;
+        case "Space":
+            jumping = true;
+            break;
+    }
+}, false);
+document.addEventListener('keyup', (e)=>{
+    let codeValue = e.code;
+    switch(codeValue){
+        case "KeyW":
+            Uppressed = false;
+            break;
+        case "KeyS":
+            Downpressed = false;
+            break;
+        case "KeyA":
+            leftPressed = false;
+            break;
+        case "KeyD":
+            rightPressed = false;
+            break;
+    }
+});
 animate();
 
 },{"three":"ktPTu"}],"ktPTu":[function(require,module,exports) {
@@ -1448,7 +1508,7 @@ parcelHelpers.export(exports, "sRGBEncoding", ()=>sRGBEncoding
  * @license
  * Copyright 2010-2022 Three.js Authors
  * SPDX-License-Identifier: MIT
- */ const REVISION = '139';
+ */ const REVISION = '140';
 const MOUSE = {
     LEFT: 0,
     MIDDLE: 1,
@@ -2893,6 +2953,11 @@ class Color {
     toJSON() {
         return this.getHex();
     }
+    *[Symbol.iterator]() {
+        yield this.r;
+        yield this.g;
+        yield this.b;
+    }
 }
 Color.NAMES = _colorKeywords;
 Color.prototype.isColor = true;
@@ -3730,9 +3795,12 @@ class WebGLMultipleRenderTargets extends WebGLRenderTarget {
         this.scissor.set(0, 0, this.width, this.height);
         this.depthBuffer = source.depthBuffer;
         this.stencilBuffer = source.stencilBuffer;
-        this.depthTexture = source.depthTexture;
+        if (source.depthTexture !== null) this.depthTexture = source.depthTexture.clone();
         this.texture.length = 0;
-        for(let i17 = 0, il = source.texture.length; i17 < il; i17++)this.texture[i17] = source.texture[i17].clone();
+        for(let i17 = 0, il = source.texture.length; i17 < il; i17++){
+            this.texture[i17] = source.texture[i17].clone();
+            this.texture[i17].isRenderTargetTexture = true;
+        }
         return this;
     }
 }
@@ -4138,6 +4206,12 @@ class Quaternion {
         return this;
     }
     _onChangeCallback() {}
+    *[Symbol.iterator]() {
+        yield this._x;
+        yield this._y;
+        yield this._z;
+        yield this._w;
+    }
 }
 Quaternion.prototype.isQuaternion = true;
 class Vector3 {
@@ -6022,6 +6096,12 @@ class Euler {
         return this;
     }
     _onChangeCallback() {}
+    *[Symbol.iterator]() {
+        yield this._x;
+        yield this._y;
+        yield this._z;
+        yield this._order;
+    }
 }
 Euler.prototype.isEuler = true;
 Euler.DefaultOrder = 'XYZ';
@@ -6717,7 +6797,6 @@ class Material extends EventDispatcher {
         this.uuid = generateUUID();
         this.name = '';
         this.type = 'Material';
-        this.fog = true;
         this.blending = NormalBlending;
         this.side = FrontSide;
         this.vertexColors = false;
@@ -6917,6 +6996,7 @@ class Material extends EventDispatcher {
         if (this.flatShading === true) data1.flatShading = this.flatShading;
         if (this.visible === false) data1.visible = false;
         if (this.toneMapped === false) data1.toneMapped = false;
+        if (this.fog === false) data1.fog = false;
         if (JSON.stringify(this.userData) !== '{}') data1.userData = this.userData;
         // TODO: Copied from Object3D.toJSON
         function extractFromCache(cache) {
@@ -6941,7 +7021,6 @@ class Material extends EventDispatcher {
     }
     copy(source) {
         this.name = source.name;
-        this.fog = source.fog;
         this.blending = source.blending;
         this.side = source.side;
         this.vertexColors = source.vertexColors;
@@ -7023,6 +7102,7 @@ class MeshBasicMaterial extends Material {
         this.wireframeLinewidth = 1;
         this.wireframeLinecap = 'round';
         this.wireframeLinejoin = 'round';
+        this.fog = true;
         this.setValues(parameters);
     }
     copy(source) {
@@ -7043,6 +7123,7 @@ class MeshBasicMaterial extends Material {
         this.wireframeLinewidth = source.wireframeLinewidth;
         this.wireframeLinecap = source.wireframeLinecap;
         this.wireframeLinejoin = source.wireframeLinejoin;
+        this.fog = source.fog;
         return this;
     }
 }
@@ -8283,6 +8364,7 @@ class ShaderMaterial extends Material {
         this.defines = Object.assign({}, source.defines);
         this.wireframe = source.wireframe;
         this.wireframeLinewidth = source.wireframeLinewidth;
+        this.fog = source.fog;
         this.lights = source.lights;
         this.clipping = source.clipping;
         this.extensions = Object.assign({}, source.extensions);
@@ -8566,10 +8648,8 @@ class CubeCamera extends Object3D {
         const renderTarget = this.renderTarget;
         const [cameraPX, cameraNX, cameraPY, cameraNY, cameraPZ, cameraNZ] = this.children;
         const currentRenderTarget = renderer.getRenderTarget();
-        const currentOutputEncoding = renderer.outputEncoding;
         const currentToneMapping = renderer.toneMapping;
         const currentXrEnabled = renderer.xr.enabled;
-        renderer.outputEncoding = LinearEncoding;
         renderer.toneMapping = NoToneMapping;
         renderer.xr.enabled = false;
         const generateMipmaps = renderTarget.texture.generateMipmaps;
@@ -8588,7 +8668,6 @@ class CubeCamera extends Object3D {
         renderer.setRenderTarget(renderTarget, 5);
         renderer.render(scene, cameraNZ);
         renderer.setRenderTarget(currentRenderTarget);
-        renderer.outputEncoding = currentOutputEncoding;
         renderer.toneMapping = currentToneMapping;
         renderer.xr.enabled = currentXrEnabled;
         renderTarget.texture.needsPMREMUpdate = true;
@@ -9086,7 +9165,7 @@ var color_pars_fragment = "#if defined( USE_COLOR_ALPHA )\n\tvarying vec4 vColor
 var color_pars_vertex = "#if defined( USE_COLOR_ALPHA )\n\tvarying vec4 vColor;\n#elif defined( USE_COLOR ) || defined( USE_INSTANCING_COLOR )\n\tvarying vec3 vColor;\n#endif";
 var color_vertex = "#if defined( USE_COLOR_ALPHA )\n\tvColor = vec4( 1.0 );\n#elif defined( USE_COLOR ) || defined( USE_INSTANCING_COLOR )\n\tvColor = vec3( 1.0 );\n#endif\n#ifdef USE_COLOR\n\tvColor *= color;\n#endif\n#ifdef USE_INSTANCING_COLOR\n\tvColor.xyz *= instanceColor.xyz;\n#endif";
 var common = "#define PI 3.141592653589793\n#define PI2 6.283185307179586\n#define PI_HALF 1.5707963267948966\n#define RECIPROCAL_PI 0.3183098861837907\n#define RECIPROCAL_PI2 0.15915494309189535\n#define EPSILON 1e-6\n#ifndef saturate\n#define saturate( a ) clamp( a, 0.0, 1.0 )\n#endif\n#define whiteComplement( a ) ( 1.0 - saturate( a ) )\nfloat pow2( const in float x ) { return x*x; }\nfloat pow3( const in float x ) { return x*x*x; }\nfloat pow4( const in float x ) { float x2 = x*x; return x2*x2; }\nfloat max3( const in vec3 v ) { return max( max( v.x, v.y ), v.z ); }\nfloat average( const in vec3 color ) { return dot( color, vec3( 0.3333 ) ); }\nhighp float rand( const in vec2 uv ) {\n\tconst highp float a = 12.9898, b = 78.233, c = 43758.5453;\n\thighp float dt = dot( uv.xy, vec2( a,b ) ), sn = mod( dt, PI );\n\treturn fract( sin( sn ) * c );\n}\n#ifdef HIGH_PRECISION\n\tfloat precisionSafeLength( vec3 v ) { return length( v ); }\n#else\n\tfloat precisionSafeLength( vec3 v ) {\n\t\tfloat maxComponent = max3( abs( v ) );\n\t\treturn length( v / maxComponent ) * maxComponent;\n\t}\n#endif\nstruct IncidentLight {\n\tvec3 color;\n\tvec3 direction;\n\tbool visible;\n};\nstruct ReflectedLight {\n\tvec3 directDiffuse;\n\tvec3 directSpecular;\n\tvec3 indirectDiffuse;\n\tvec3 indirectSpecular;\n};\nstruct GeometricContext {\n\tvec3 position;\n\tvec3 normal;\n\tvec3 viewDir;\n#ifdef USE_CLEARCOAT\n\tvec3 clearcoatNormal;\n#endif\n};\nvec3 transformDirection( in vec3 dir, in mat4 matrix ) {\n\treturn normalize( ( matrix * vec4( dir, 0.0 ) ).xyz );\n}\nvec3 inverseTransformDirection( in vec3 dir, in mat4 matrix ) {\n\treturn normalize( ( vec4( dir, 0.0 ) * matrix ).xyz );\n}\nmat3 transposeMat3( const in mat3 m ) {\n\tmat3 tmp;\n\ttmp[ 0 ] = vec3( m[ 0 ].x, m[ 1 ].x, m[ 2 ].x );\n\ttmp[ 1 ] = vec3( m[ 0 ].y, m[ 1 ].y, m[ 2 ].y );\n\ttmp[ 2 ] = vec3( m[ 0 ].z, m[ 1 ].z, m[ 2 ].z );\n\treturn tmp;\n}\nfloat linearToRelativeLuminance( const in vec3 color ) {\n\tvec3 weights = vec3( 0.2126, 0.7152, 0.0722 );\n\treturn dot( weights, color.rgb );\n}\nbool isPerspectiveMatrix( mat4 m ) {\n\treturn m[ 2 ][ 3 ] == - 1.0;\n}\nvec2 equirectUv( in vec3 dir ) {\n\tfloat u = atan( dir.z, dir.x ) * RECIPROCAL_PI2 + 0.5;\n\tfloat v = asin( clamp( dir.y, - 1.0, 1.0 ) ) * RECIPROCAL_PI + 0.5;\n\treturn vec2( u, v );\n}";
-var cube_uv_reflection_fragment = "#ifdef ENVMAP_TYPE_CUBE_UV\n\t#define cubeUV_minMipLevel 4.0\n\t#define cubeUV_minTileSize 16.0\n\tfloat getFace( vec3 direction ) {\n\t\tvec3 absDirection = abs( direction );\n\t\tfloat face = - 1.0;\n\t\tif ( absDirection.x > absDirection.z ) {\n\t\t\tif ( absDirection.x > absDirection.y )\n\t\t\t\tface = direction.x > 0.0 ? 0.0 : 3.0;\n\t\t\telse\n\t\t\t\tface = direction.y > 0.0 ? 1.0 : 4.0;\n\t\t} else {\n\t\t\tif ( absDirection.z > absDirection.y )\n\t\t\t\tface = direction.z > 0.0 ? 2.0 : 5.0;\n\t\t\telse\n\t\t\t\tface = direction.y > 0.0 ? 1.0 : 4.0;\n\t\t}\n\t\treturn face;\n\t}\n\tvec2 getUV( vec3 direction, float face ) {\n\t\tvec2 uv;\n\t\tif ( face == 0.0 ) {\n\t\t\tuv = vec2( direction.z, direction.y ) / abs( direction.x );\n\t\t} else if ( face == 1.0 ) {\n\t\t\tuv = vec2( - direction.x, - direction.z ) / abs( direction.y );\n\t\t} else if ( face == 2.0 ) {\n\t\t\tuv = vec2( - direction.x, direction.y ) / abs( direction.z );\n\t\t} else if ( face == 3.0 ) {\n\t\t\tuv = vec2( - direction.z, direction.y ) / abs( direction.x );\n\t\t} else if ( face == 4.0 ) {\n\t\t\tuv = vec2( - direction.x, direction.z ) / abs( direction.y );\n\t\t} else {\n\t\t\tuv = vec2( direction.x, direction.y ) / abs( direction.z );\n\t\t}\n\t\treturn 0.5 * ( uv + 1.0 );\n\t}\n\tvec3 bilinearCubeUV( sampler2D envMap, vec3 direction, float mipInt ) {\n\t\tfloat face = getFace( direction );\n\t\tfloat filterInt = max( cubeUV_minMipLevel - mipInt, 0.0 );\n\t\tmipInt = max( mipInt, cubeUV_minMipLevel );\n\t\tfloat faceSize = exp2( mipInt );\n\t\tvec2 uv = getUV( direction, face ) * ( faceSize - 1.0 ) + 0.5;\n\t\tif ( face > 2.0 ) {\n\t\t\tuv.y += faceSize;\n\t\t\tface -= 3.0;\n\t\t}\n\t\tuv.x += face * faceSize;\n\t\tuv.x += filterInt * 3.0 * cubeUV_minTileSize;\n\t\tuv.y += 4.0 * ( exp2( CUBEUV_MAX_MIP ) - faceSize );\n\t\tuv.x *= CUBEUV_TEXEL_WIDTH;\n\t\tuv.y *= CUBEUV_TEXEL_HEIGHT;\n\t\t#ifdef texture2DGradEXT\n\t\t\treturn texture2DGradEXT( envMap, uv, vec2( 0.0 ), vec2( 0.0 ) ).rgb;\n\t\t#else\n\t\t\treturn texture2D( envMap, uv ).rgb;\n\t\t#endif\n\t}\n\t#define r0 1.0\n\t#define v0 0.339\n\t#define m0 - 2.0\n\t#define r1 0.8\n\t#define v1 0.276\n\t#define m1 - 1.0\n\t#define r4 0.4\n\t#define v4 0.046\n\t#define m4 2.0\n\t#define r5 0.305\n\t#define v5 0.016\n\t#define m5 3.0\n\t#define r6 0.21\n\t#define v6 0.0038\n\t#define m6 4.0\n\tfloat roughnessToMip( float roughness ) {\n\t\tfloat mip = 0.0;\n\t\tif ( roughness >= r1 ) {\n\t\t\tmip = ( r0 - roughness ) * ( m1 - m0 ) / ( r0 - r1 ) + m0;\n\t\t} else if ( roughness >= r4 ) {\n\t\t\tmip = ( r1 - roughness ) * ( m4 - m1 ) / ( r1 - r4 ) + m1;\n\t\t} else if ( roughness >= r5 ) {\n\t\t\tmip = ( r4 - roughness ) * ( m5 - m4 ) / ( r4 - r5 ) + m4;\n\t\t} else if ( roughness >= r6 ) {\n\t\t\tmip = ( r5 - roughness ) * ( m6 - m5 ) / ( r5 - r6 ) + m5;\n\t\t} else {\n\t\t\tmip = - 2.0 * log2( 1.16 * roughness );\t\t}\n\t\treturn mip;\n\t}\n\tvec4 textureCubeUV( sampler2D envMap, vec3 sampleDir, float roughness ) {\n\t\tfloat mip = clamp( roughnessToMip( roughness ), m0, CUBEUV_MAX_MIP );\n\t\tfloat mipF = fract( mip );\n\t\tfloat mipInt = floor( mip );\n\t\tvec3 color0 = bilinearCubeUV( envMap, sampleDir, mipInt );\n\t\tif ( mipF == 0.0 ) {\n\t\t\treturn vec4( color0, 1.0 );\n\t\t} else {\n\t\t\tvec3 color1 = bilinearCubeUV( envMap, sampleDir, mipInt + 1.0 );\n\t\t\treturn vec4( mix( color0, color1, mipF ), 1.0 );\n\t\t}\n\t}\n#endif";
+var cube_uv_reflection_fragment = "#ifdef ENVMAP_TYPE_CUBE_UV\n\t#define cubeUV_minMipLevel 4.0\n\t#define cubeUV_minTileSize 16.0\n\tfloat getFace( vec3 direction ) {\n\t\tvec3 absDirection = abs( direction );\n\t\tfloat face = - 1.0;\n\t\tif ( absDirection.x > absDirection.z ) {\n\t\t\tif ( absDirection.x > absDirection.y )\n\t\t\t\tface = direction.x > 0.0 ? 0.0 : 3.0;\n\t\t\telse\n\t\t\t\tface = direction.y > 0.0 ? 1.0 : 4.0;\n\t\t} else {\n\t\t\tif ( absDirection.z > absDirection.y )\n\t\t\t\tface = direction.z > 0.0 ? 2.0 : 5.0;\n\t\t\telse\n\t\t\t\tface = direction.y > 0.0 ? 1.0 : 4.0;\n\t\t}\n\t\treturn face;\n\t}\n\tvec2 getUV( vec3 direction, float face ) {\n\t\tvec2 uv;\n\t\tif ( face == 0.0 ) {\n\t\t\tuv = vec2( direction.z, direction.y ) / abs( direction.x );\n\t\t} else if ( face == 1.0 ) {\n\t\t\tuv = vec2( - direction.x, - direction.z ) / abs( direction.y );\n\t\t} else if ( face == 2.0 ) {\n\t\t\tuv = vec2( - direction.x, direction.y ) / abs( direction.z );\n\t\t} else if ( face == 3.0 ) {\n\t\t\tuv = vec2( - direction.z, direction.y ) / abs( direction.x );\n\t\t} else if ( face == 4.0 ) {\n\t\t\tuv = vec2( - direction.x, direction.z ) / abs( direction.y );\n\t\t} else {\n\t\t\tuv = vec2( direction.x, direction.y ) / abs( direction.z );\n\t\t}\n\t\treturn 0.5 * ( uv + 1.0 );\n\t}\n\tvec3 bilinearCubeUV( sampler2D envMap, vec3 direction, float mipInt ) {\n\t\tfloat face = getFace( direction );\n\t\tfloat filterInt = max( cubeUV_minMipLevel - mipInt, 0.0 );\n\t\tmipInt = max( mipInt, cubeUV_minMipLevel );\n\t\tfloat faceSize = exp2( mipInt );\n\t\tvec2 uv = getUV( direction, face ) * ( faceSize - 2.0 ) + 1.0;\n\t\tif ( face > 2.0 ) {\n\t\t\tuv.y += faceSize;\n\t\t\tface -= 3.0;\n\t\t}\n\t\tuv.x += face * faceSize;\n\t\tuv.x += filterInt * 3.0 * cubeUV_minTileSize;\n\t\tuv.y += 4.0 * ( exp2( CUBEUV_MAX_MIP ) - faceSize );\n\t\tuv.x *= CUBEUV_TEXEL_WIDTH;\n\t\tuv.y *= CUBEUV_TEXEL_HEIGHT;\n\t\t#ifdef texture2DGradEXT\n\t\t\treturn texture2DGradEXT( envMap, uv, vec2( 0.0 ), vec2( 0.0 ) ).rgb;\n\t\t#else\n\t\t\treturn texture2D( envMap, uv ).rgb;\n\t\t#endif\n\t}\n\t#define r0 1.0\n\t#define v0 0.339\n\t#define m0 - 2.0\n\t#define r1 0.8\n\t#define v1 0.276\n\t#define m1 - 1.0\n\t#define r4 0.4\n\t#define v4 0.046\n\t#define m4 2.0\n\t#define r5 0.305\n\t#define v5 0.016\n\t#define m5 3.0\n\t#define r6 0.21\n\t#define v6 0.0038\n\t#define m6 4.0\n\tfloat roughnessToMip( float roughness ) {\n\t\tfloat mip = 0.0;\n\t\tif ( roughness >= r1 ) {\n\t\t\tmip = ( r0 - roughness ) * ( m1 - m0 ) / ( r0 - r1 ) + m0;\n\t\t} else if ( roughness >= r4 ) {\n\t\t\tmip = ( r1 - roughness ) * ( m4 - m1 ) / ( r1 - r4 ) + m1;\n\t\t} else if ( roughness >= r5 ) {\n\t\t\tmip = ( r4 - roughness ) * ( m5 - m4 ) / ( r4 - r5 ) + m4;\n\t\t} else if ( roughness >= r6 ) {\n\t\t\tmip = ( r5 - roughness ) * ( m6 - m5 ) / ( r5 - r6 ) + m5;\n\t\t} else {\n\t\t\tmip = - 2.0 * log2( 1.16 * roughness );\t\t}\n\t\treturn mip;\n\t}\n\tvec4 textureCubeUV( sampler2D envMap, vec3 sampleDir, float roughness ) {\n\t\tfloat mip = clamp( roughnessToMip( roughness ), m0, CUBEUV_MAX_MIP );\n\t\tfloat mipF = fract( mip );\n\t\tfloat mipInt = floor( mip );\n\t\tvec3 color0 = bilinearCubeUV( envMap, sampleDir, mipInt );\n\t\tif ( mipF == 0.0 ) {\n\t\t\treturn vec4( color0, 1.0 );\n\t\t} else {\n\t\t\tvec3 color1 = bilinearCubeUV( envMap, sampleDir, mipInt + 1.0 );\n\t\t\treturn vec4( mix( color0, color1, mipF ), 1.0 );\n\t\t}\n\t}\n#endif";
 var defaultnormal_vertex = "vec3 transformedNormal = objectNormal;\n#ifdef USE_INSTANCING\n\tmat3 m = mat3( instanceMatrix );\n\ttransformedNormal /= vec3( dot( m[ 0 ], m[ 0 ] ), dot( m[ 1 ], m[ 1 ] ), dot( m[ 2 ], m[ 2 ] ) );\n\ttransformedNormal = m * transformedNormal;\n#endif\ntransformedNormal = normalMatrix * transformedNormal;\n#ifdef FLIP_SIDED\n\ttransformedNormal = - transformedNormal;\n#endif\n#ifdef USE_TANGENT\n\tvec3 transformedTangent = ( modelViewMatrix * vec4( objectTangent, 0.0 ) ).xyz;\n\t#ifdef FLIP_SIDED\n\t\ttransformedTangent = - transformedTangent;\n\t#endif\n#endif";
 var displacementmap_pars_vertex = "#ifdef USE_DISPLACEMENTMAP\n\tuniform sampler2D displacementMap;\n\tuniform float displacementScale;\n\tuniform float displacementBias;\n#endif";
 var displacementmap_vertex = "#ifdef USE_DISPLACEMENTMAP\n\ttransformed += normalize( objectNormal ) * ( texture2D( displacementMap, vUv ).x * displacementScale + displacementBias );\n#endif";
@@ -9154,7 +9233,7 @@ var shadowmap_pars_vertex = "#ifdef USE_SHADOWMAP\n\t#if NUM_DIR_LIGHT_SHADOWS >
 var shadowmap_vertex = "#ifdef USE_SHADOWMAP\n\t#if NUM_DIR_LIGHT_SHADOWS > 0 || NUM_SPOT_LIGHT_SHADOWS > 0 || NUM_POINT_LIGHT_SHADOWS > 0\n\t\tvec3 shadowWorldNormal = inverseTransformDirection( transformedNormal, viewMatrix );\n\t\tvec4 shadowWorldPosition;\n\t#endif\n\t#if NUM_DIR_LIGHT_SHADOWS > 0\n\t#pragma unroll_loop_start\n\tfor ( int i = 0; i < NUM_DIR_LIGHT_SHADOWS; i ++ ) {\n\t\tshadowWorldPosition = worldPosition + vec4( shadowWorldNormal * directionalLightShadows[ i ].shadowNormalBias, 0 );\n\t\tvDirectionalShadowCoord[ i ] = directionalShadowMatrix[ i ] * shadowWorldPosition;\n\t}\n\t#pragma unroll_loop_end\n\t#endif\n\t#if NUM_SPOT_LIGHT_SHADOWS > 0\n\t#pragma unroll_loop_start\n\tfor ( int i = 0; i < NUM_SPOT_LIGHT_SHADOWS; i ++ ) {\n\t\tshadowWorldPosition = worldPosition + vec4( shadowWorldNormal * spotLightShadows[ i ].shadowNormalBias, 0 );\n\t\tvSpotShadowCoord[ i ] = spotShadowMatrix[ i ] * shadowWorldPosition;\n\t}\n\t#pragma unroll_loop_end\n\t#endif\n\t#if NUM_POINT_LIGHT_SHADOWS > 0\n\t#pragma unroll_loop_start\n\tfor ( int i = 0; i < NUM_POINT_LIGHT_SHADOWS; i ++ ) {\n\t\tshadowWorldPosition = worldPosition + vec4( shadowWorldNormal * pointLightShadows[ i ].shadowNormalBias, 0 );\n\t\tvPointShadowCoord[ i ] = pointShadowMatrix[ i ] * shadowWorldPosition;\n\t}\n\t#pragma unroll_loop_end\n\t#endif\n#endif";
 var shadowmask_pars_fragment = "float getShadowMask() {\n\tfloat shadow = 1.0;\n\t#ifdef USE_SHADOWMAP\n\t#if NUM_DIR_LIGHT_SHADOWS > 0\n\tDirectionalLightShadow directionalLight;\n\t#pragma unroll_loop_start\n\tfor ( int i = 0; i < NUM_DIR_LIGHT_SHADOWS; i ++ ) {\n\t\tdirectionalLight = directionalLightShadows[ i ];\n\t\tshadow *= receiveShadow ? getShadow( directionalShadowMap[ i ], directionalLight.shadowMapSize, directionalLight.shadowBias, directionalLight.shadowRadius, vDirectionalShadowCoord[ i ] ) : 1.0;\n\t}\n\t#pragma unroll_loop_end\n\t#endif\n\t#if NUM_SPOT_LIGHT_SHADOWS > 0\n\tSpotLightShadow spotLight;\n\t#pragma unroll_loop_start\n\tfor ( int i = 0; i < NUM_SPOT_LIGHT_SHADOWS; i ++ ) {\n\t\tspotLight = spotLightShadows[ i ];\n\t\tshadow *= receiveShadow ? getShadow( spotShadowMap[ i ], spotLight.shadowMapSize, spotLight.shadowBias, spotLight.shadowRadius, vSpotShadowCoord[ i ] ) : 1.0;\n\t}\n\t#pragma unroll_loop_end\n\t#endif\n\t#if NUM_POINT_LIGHT_SHADOWS > 0\n\tPointLightShadow pointLight;\n\t#pragma unroll_loop_start\n\tfor ( int i = 0; i < NUM_POINT_LIGHT_SHADOWS; i ++ ) {\n\t\tpointLight = pointLightShadows[ i ];\n\t\tshadow *= receiveShadow ? getPointShadow( pointShadowMap[ i ], pointLight.shadowMapSize, pointLight.shadowBias, pointLight.shadowRadius, vPointShadowCoord[ i ], pointLight.shadowCameraNear, pointLight.shadowCameraFar ) : 1.0;\n\t}\n\t#pragma unroll_loop_end\n\t#endif\n\t#endif\n\treturn shadow;\n}";
 var skinbase_vertex = "#ifdef USE_SKINNING\n\tmat4 boneMatX = getBoneMatrix( skinIndex.x );\n\tmat4 boneMatY = getBoneMatrix( skinIndex.y );\n\tmat4 boneMatZ = getBoneMatrix( skinIndex.z );\n\tmat4 boneMatW = getBoneMatrix( skinIndex.w );\n#endif";
-var skinning_pars_vertex = "#ifdef USE_SKINNING\n\tuniform mat4 bindMatrix;\n\tuniform mat4 bindMatrixInverse;\n\t#ifdef BONE_TEXTURE\n\t\tuniform highp sampler2D boneTexture;\n\t\tuniform int boneTextureSize;\n\t\tmat4 getBoneMatrix( const in float i ) {\n\t\t\tfloat j = i * 4.0;\n\t\t\tfloat x = mod( j, float( boneTextureSize ) );\n\t\t\tfloat y = floor( j / float( boneTextureSize ) );\n\t\t\tfloat dx = 1.0 / float( boneTextureSize );\n\t\t\tfloat dy = 1.0 / float( boneTextureSize );\n\t\t\ty = dy * ( y + 0.5 );\n\t\t\tvec4 v1 = texture2D( boneTexture, vec2( dx * ( x + 0.5 ), y ) );\n\t\t\tvec4 v2 = texture2D( boneTexture, vec2( dx * ( x + 1.5 ), y ) );\n\t\t\tvec4 v3 = texture2D( boneTexture, vec2( dx * ( x + 2.5 ), y ) );\n\t\t\tvec4 v4 = texture2D( boneTexture, vec2( dx * ( x + 3.5 ), y ) );\n\t\t\tmat4 bone = mat4( v1, v2, v3, v4 );\n\t\t\treturn bone;\n\t\t}\n\t#else\n\t\tuniform mat4 boneMatrices[ MAX_BONES ];\n\t\tmat4 getBoneMatrix( const in float i ) {\n\t\t\tmat4 bone = boneMatrices[ int(i) ];\n\t\t\treturn bone;\n\t\t}\n\t#endif\n#endif";
+var skinning_pars_vertex = "#ifdef USE_SKINNING\n\tuniform mat4 bindMatrix;\n\tuniform mat4 bindMatrixInverse;\n\tuniform highp sampler2D boneTexture;\n\tuniform int boneTextureSize;\n\tmat4 getBoneMatrix( const in float i ) {\n\t\tfloat j = i * 4.0;\n\t\tfloat x = mod( j, float( boneTextureSize ) );\n\t\tfloat y = floor( j / float( boneTextureSize ) );\n\t\tfloat dx = 1.0 / float( boneTextureSize );\n\t\tfloat dy = 1.0 / float( boneTextureSize );\n\t\ty = dy * ( y + 0.5 );\n\t\tvec4 v1 = texture2D( boneTexture, vec2( dx * ( x + 0.5 ), y ) );\n\t\tvec4 v2 = texture2D( boneTexture, vec2( dx * ( x + 1.5 ), y ) );\n\t\tvec4 v3 = texture2D( boneTexture, vec2( dx * ( x + 2.5 ), y ) );\n\t\tvec4 v4 = texture2D( boneTexture, vec2( dx * ( x + 3.5 ), y ) );\n\t\tmat4 bone = mat4( v1, v2, v3, v4 );\n\t\treturn bone;\n\t}\n#endif";
 var skinning_vertex = "#ifdef USE_SKINNING\n\tvec4 skinVertex = bindMatrix * vec4( transformed, 1.0 );\n\tvec4 skinned = vec4( 0.0 );\n\tskinned += boneMatX * skinVertex * skinWeight.x;\n\tskinned += boneMatY * skinVertex * skinWeight.y;\n\tskinned += boneMatZ * skinVertex * skinWeight.z;\n\tskinned += boneMatW * skinVertex * skinWeight.w;\n\ttransformed = ( bindMatrixInverse * skinned ).xyz;\n#endif";
 var skinnormal_vertex = "#ifdef USE_SKINNING\n\tmat4 skinMatrix = mat4( 0.0 );\n\tskinMatrix += skinWeight.x * boneMatX;\n\tskinMatrix += skinWeight.y * boneMatY;\n\tskinMatrix += skinWeight.z * boneMatZ;\n\tskinMatrix += skinWeight.w * boneMatW;\n\tskinMatrix = bindMatrixInverse * skinMatrix * bindMatrix;\n\tobjectNormal = vec4( skinMatrix * vec4( objectNormal, 0.0 ) ).xyz;\n\t#ifdef USE_TANGENT\n\t\tobjectTangent = vec4( skinMatrix * vec4( objectTangent, 0.0 ) ).xyz;\n\t#endif\n#endif";
 var specularmap_fragment = "float specularStrength;\n#ifdef USE_SPECULARMAP\n\tvec4 texelSpecular = texture2D( specularMap, vUv );\n\tspecularStrength = texelSpecular.r;\n#else\n\tspecularStrength = 1.0;\n#endif";
@@ -10016,6 +10095,7 @@ function WebGLBackground(renderer, cubemaps, state, objects, alpha1, premultipli
                 currentBackgroundVersion = background.version;
                 currentTonemapping = renderer.toneMapping;
             }
+            boxMesh.layers.enableAll();
             // push to the pre-sorted opaque render list
             renderList.unshift(boxMesh, boxMesh.geometry, boxMesh.material, 0, 0, null);
         } else if (background && background.isTexture) {
@@ -10048,6 +10128,7 @@ function WebGLBackground(renderer, cubemaps, state, objects, alpha1, premultipli
                 currentBackgroundVersion = background.version;
                 currentTonemapping = renderer.toneMapping;
             }
+            planeMesh.layers.enableAll();
             // push to the pre-sorted opaque render list
             renderList.unshift(planeMesh, planeMesh.geometry, planeMesh.material, 0, 0, null);
         }
@@ -10090,8 +10171,8 @@ function WebGLBindingStates(gl, extensions, attributes1, capabilities) {
                 currentState = state;
                 bindVertexArrayObject(currentState.object);
             }
-            updateBuffers = needsUpdate(geometry, index);
-            if (updateBuffers) saveCache(geometry, index);
+            updateBuffers = needsUpdate(object, geometry, program, index);
+            if (updateBuffers) saveCache(object, geometry, program, index);
         } else {
             const wireframe = material.wireframe === true;
             if (currentState.geometry !== geometry.id || currentState.program !== program.id || currentState.wireframe !== wireframe) {
@@ -10101,7 +10182,6 @@ function WebGLBindingStates(gl, extensions, attributes1, capabilities) {
                 updateBuffers = true;
             }
         }
-        if (object.isInstancedMesh === true) updateBuffers = true;
         if (index !== null) attributes1.update(index, 34963);
         if (updateBuffers || forceUpdate) {
             forceUpdate = false;
@@ -10162,33 +10242,49 @@ function WebGLBindingStates(gl, extensions, attributes1, capabilities) {
             index: null
         };
     }
-    function needsUpdate(geometry, index) {
+    function needsUpdate(object, geometry, program, index) {
         const cachedAttributes = currentState.attributes;
         const geometryAttributes = geometry.attributes;
         let attributesNum = 0;
-        for(const key in geometryAttributes){
-            const cachedAttribute = cachedAttributes[key];
-            const geometryAttribute = geometryAttributes[key];
-            if (cachedAttribute === undefined) return true;
-            if (cachedAttribute.attribute !== geometryAttribute) return true;
-            if (cachedAttribute.data !== geometryAttribute.data) return true;
-            attributesNum++;
+        const programAttributes = program.getAttributes();
+        for(const name in programAttributes){
+            const programAttribute = programAttributes[name];
+            if (programAttribute.location >= 0) {
+                const cachedAttribute = cachedAttributes[name];
+                let geometryAttribute = geometryAttributes[name];
+                if (geometryAttribute === undefined) {
+                    if (name === 'instanceMatrix' && object.instanceMatrix) geometryAttribute = object.instanceMatrix;
+                    if (name === 'instanceColor' && object.instanceColor) geometryAttribute = object.instanceColor;
+                }
+                if (cachedAttribute === undefined) return true;
+                if (cachedAttribute.attribute !== geometryAttribute) return true;
+                if (geometryAttribute && cachedAttribute.data !== geometryAttribute.data) return true;
+                attributesNum++;
+            }
         }
         if (currentState.attributesNum !== attributesNum) return true;
         if (currentState.index !== index) return true;
         return false;
     }
-    function saveCache(geometry, index) {
+    function saveCache(object, geometry, program, index) {
         const cache = {};
         const attributes = geometry.attributes;
         let attributesNum = 0;
-        for(const key in attributes){
-            const attribute = attributes[key];
-            const data = {};
-            data.attribute = attribute;
-            if (attribute.data) data.data = attribute.data;
-            cache[key] = data;
-            attributesNum++;
+        const programAttributes = program.getAttributes();
+        for(const name in programAttributes){
+            const programAttribute = programAttributes[name];
+            if (programAttribute.location >= 0) {
+                let attribute = attributes[name];
+                if (attribute === undefined) {
+                    if (name === 'instanceMatrix' && object.instanceMatrix) attribute = object.instanceMatrix;
+                    if (name === 'instanceColor' && object.instanceColor) attribute = object.instanceColor;
+                }
+                const data = {};
+                data.attribute = attribute;
+                if (attribute && attribute.data) data.data = attribute.data;
+                cache[name] = data;
+                attributesNum++;
+            }
         }
         currentState.attributes = cache;
         currentState.attributesNum = attributesNum;
@@ -10804,7 +10900,7 @@ const _axisDirections = [
     }
     _allocateTargets() {
         const width = 3 * Math.max(this._cubeSize, 112);
-        const height = 4 * this._cubeSize - 32;
+        const height = 4 * this._cubeSize;
         const params = {
             magFilter: LinearFilter,
             minFilter: LinearFilter,
@@ -10987,9 +11083,9 @@ function _createPlanes(lodMax) {
         if (i96 > lodMax - LOD_MIN) sigma = EXTRA_LOD_SIGMA[i96 - lodMax + LOD_MIN - 1];
         else if (i96 === 0) sigma = 0;
         sigmas.push(sigma);
-        const texelSize = 1.0 / (sizeLod - 1);
-        const min = -texelSize / 2;
-        const max = 1 + texelSize / 2;
+        const texelSize = 1.0 / (sizeLod - 2);
+        const min = -texelSize;
+        const max = 1 + texelSize;
         const uv1 = [
             min,
             min,
@@ -12296,11 +12392,6 @@ function PureArrayUniform(id, activeInfo, addr) {
     this.setValue = getPureArraySetter(activeInfo.type);
 // this.path = activeInfo.name; // DEBUG
 }
-PureArrayUniform.prototype.updateCache = function(data) {
-    const cache = this.cache;
-    if (data instanceof Float32Array && cache.length !== data.length) this.cache = new Float32Array(data.length);
-    copyArray(cache, data);
-};
 function StructuredUniform(id) {
     this.id = id;
     this.seq = [];
@@ -12426,10 +12517,13 @@ function getShaderErrors(gl, shader, type) {
     const status = gl.getShaderParameter(shader, 35713);
     const errors = gl.getShaderInfoLog(shader).trim();
     if (status && errors === '') return '';
-    const errorLine = parseInt(/ERROR: 0:(\d+)/.exec(errors)[1]);
-    // --enable-privileged-webgl-extension
-    // console.log( '**' + type + '**', gl.getExtension( 'WEBGL_debug_shaders' ).getTranslatedShaderSource( shader ) );
-    return type.toUpperCase() + '\n\n' + errors + '\n\n' + handleSource(gl.getShaderSource(shader), errorLine);
+    const errorMatches = /ERROR: 0:(\d+)/.exec(errors);
+    if (errorMatches) {
+        // --enable-privileged-webgl-extension
+        // console.log( '**' + type + '**', gl.getExtension( 'WEBGL_debug_shaders' ).getTranslatedShaderSource( shader ) );
+        const errorLine = parseInt(errorMatches[0]);
+        return type.toUpperCase() + '\n\n' + errors + '\n\n' + handleSource(gl.getShaderSource(shader), errorLine);
+    } else return errors;
 }
 function getTexelEncodingFunction(functionName, encoding) {
     const components = getEncodingComponents(encoding);
@@ -12585,7 +12679,7 @@ function generateEnvMapBlendingDefine(parameters) {
 function generateCubeUVSize(parameters) {
     const imageHeight = parameters.envMapCubeUVHeight;
     if (imageHeight === null) return null;
-    const maxMip = Math.log2(imageHeight / 32 + 1) + 3;
+    const maxMip = Math.log2(imageHeight) - 2;
     const texelHeight = 1.0 / imageHeight;
     const texelWidth = 1.0 / (3 * Math.max(Math.pow(2, maxMip), 112));
     return {
@@ -12629,7 +12723,6 @@ function WebGLProgram(renderer, cacheKey, parameters, bindingStates) {
             parameters.instancing ? '#define USE_INSTANCING' : '',
             parameters.instancingColor ? '#define USE_INSTANCING_COLOR' : '',
             parameters.supportsVertexTextures ? '#define VERTEX_TEXTURES' : '',
-            '#define MAX_BONES ' + parameters.maxBones,
             parameters.useFog && parameters.fog ? '#define USE_FOG' : '',
             parameters.useFog && parameters.fogExp2 ? '#define FOG_EXP2' : '',
             parameters.map ? '#define USE_MAP' : '',
@@ -12664,7 +12757,6 @@ function WebGLProgram(renderer, cacheKey, parameters, bindingStates) {
             parameters.uvsVertexOnly ? '#define UVS_VERTEX_ONLY' : '',
             parameters.flatShading ? '#define FLAT_SHADED' : '',
             parameters.skinning ? '#define USE_SKINNING' : '',
-            parameters.useVertexTexture ? '#define BONE_TEXTURE' : '',
             parameters.morphTargets ? '#define USE_MORPHTARGETS' : '',
             parameters.morphNormals && parameters.flatShading === false ? '#define USE_MORPHNORMALS' : '',
             parameters.morphColors && parameters.isWebGL2 ? '#define USE_MORPHCOLORS' : '',
@@ -12791,7 +12883,7 @@ function WebGLProgram(renderer, cacheKey, parameters, bindingStates) {
             parameters.opaque ? '#define OPAQUE' : '',
             ShaderChunk['encodings_pars_fragment'],
             getTexelEncodingFunction('linearToOutputTexel', parameters.outputEncoding),
-            parameters.depthPacking ? '#define DEPTH_PACKING ' + parameters.depthPacking : '',
+            parameters.useDepthPacking ? '#define DEPTH_PACKING ' + parameters.depthPacking : '',
             '\n'
         ].filter(filterEmptyLine).join('\n');
     }
@@ -12970,8 +13062,6 @@ function WebGLPrograms(renderer, cubemaps, cubeuvmaps, extensions, capabilities,
     const programs = [];
     const isWebGL2 = capabilities.isWebGL2;
     const logarithmicDepthBuffer = capabilities.logarithmicDepthBuffer;
-    const floatVertexTextures = capabilities.floatVertexTextures;
-    const maxVertexUniforms = capabilities.maxVertexUniforms;
     const vertexTextures = capabilities.vertexTextures;
     let precision = capabilities.precision;
     const shaderIDs = {
@@ -12991,27 +13081,6 @@ function WebGLPrograms(renderer, cubemaps, cubeuvmaps, extensions, capabilities,
         ShadowMaterial: 'shadow',
         SpriteMaterial: 'sprite'
     };
-    function getMaxBones(object) {
-        const skeleton = object.skeleton;
-        const bones = skeleton.bones;
-        if (floatVertexTextures) return 1024;
-        else {
-            // default for when object is not specified
-            // ( for example when prebuilding shader to be used with multiple objects )
-            //
-            //  - leave some extra space for other uniforms
-            //  - limit here is ANGLE's 254 max uniform vectors
-            //    (up to 54 should be safe)
-            const nVertexUniforms = maxVertexUniforms;
-            const nVertexMatrices = Math.floor((nVertexUniforms - 20) / 4);
-            const maxBones = Math.min(nVertexMatrices, bones.length);
-            if (maxBones < bones.length) {
-                console.warn('THREE.WebGLRenderer: Skeleton has ' + bones.length + ' bones. This GPU supports ' + maxBones + '.');
-                return 0;
-            }
-            return maxBones;
-        }
-    }
     function getParameters(material, lights, shadows, scene, object) {
         const fog = scene.fog;
         const geometry = object.geometry;
@@ -13021,7 +13090,6 @@ function WebGLPrograms(renderer, cubemaps, cubeuvmaps, extensions, capabilities,
         const shaderID = shaderIDs[material.type];
         // heuristics to create shader parameters according to lights in the scene
         // (not to blow over maxLights budget)
-        const maxBones = object.isSkinnedMesh ? getMaxBones(object) : 0;
         if (material.precision !== null) {
             precision = capabilities.getMaxPrecision(material.precision);
             if (precision !== material.precision) console.warn('THREE.WebGLProgram.getParameters:', material.precision, 'not supported, using', precision, 'instead.');
@@ -13106,14 +13174,12 @@ function WebGLPrograms(renderer, cubemaps, cubeuvmaps, extensions, capabilities,
             vertexUvs: !!material.map || !!material.bumpMap || !!material.normalMap || !!material.specularMap || !!material.alphaMap || !!material.emissiveMap || !!material.roughnessMap || !!material.metalnessMap || !!material.clearcoatMap || !!material.clearcoatRoughnessMap || !!material.clearcoatNormalMap || !!material.displacementMap || !!material.transmissionMap || !!material.thicknessMap || !!material.specularIntensityMap || !!material.specularColorMap || !!material.sheenColorMap || !!material.sheenRoughnessMap,
             uvsVertexOnly: !(!!material.map || !!material.bumpMap || !!material.normalMap || !!material.specularMap || !!material.alphaMap || !!material.emissiveMap || !!material.roughnessMap || !!material.metalnessMap || !!material.clearcoatNormalMap || material.transmission > 0 || !!material.transmissionMap || !!material.thicknessMap || !!material.specularIntensityMap || !!material.specularColorMap || material.sheen > 0 || !!material.sheenColorMap || !!material.sheenRoughnessMap) && !!material.displacementMap,
             fog: !!fog,
-            useFog: material.fog,
+            useFog: material.fog === true,
             fogExp2: fog && fog.isFogExp2,
             flatShading: !!material.flatShading,
             sizeAttenuation: material.sizeAttenuation,
             logarithmicDepthBuffer: logarithmicDepthBuffer,
-            skinning: object.isSkinnedMesh === true && maxBones > 0,
-            maxBones: maxBones,
-            useVertexTexture: floatVertexTextures,
+            skinning: object.isSkinnedMesh === true,
             morphTargets: geometry.morphAttributes.position !== undefined,
             morphNormals: geometry.morphAttributes.normal !== undefined,
             morphColors: geometry.morphAttributes.color !== undefined,
@@ -13137,7 +13203,8 @@ function WebGLPrograms(renderer, cubemaps, cubeuvmaps, extensions, capabilities,
             premultipliedAlpha: material.premultipliedAlpha,
             doubleSided: material.side === DoubleSide,
             flipSided: material.side === BackSide,
-            depthPacking: material.depthPacking !== undefined ? material.depthPacking : false,
+            useDepthPacking: !!material.depthPacking,
+            depthPacking: material.depthPacking || 0,
             index0AttributeName: material.index0AttributeName,
             extensionDerivatives: material.extensions && material.extensions.derivatives,
             extensionFragDepth: material.extensions && material.extensions.fragDepth,
@@ -13178,7 +13245,6 @@ function WebGLPrograms(renderer, cubemaps, cubeuvmaps, extensions, capabilities,
         array.push(parameters.vertexUvs);
         array.push(parameters.fogExp2);
         array.push(parameters.sizeAttenuation);
-        array.push(parameters.maxBones);
         array.push(parameters.morphTargetsCount);
         array.push(parameters.morphAttributeCount);
         array.push(parameters.numDirLights);
@@ -13193,6 +13259,7 @@ function WebGLPrograms(renderer, cubemaps, cubeuvmaps, extensions, capabilities,
         array.push(parameters.toneMapping);
         array.push(parameters.numClippingPlanes);
         array.push(parameters.numClipIntersection);
+        array.push(parameters.depthPacking);
     }
     function getProgramCacheKeyBooleans(array, parameters) {
         _programLayers.disableAll();
@@ -13233,27 +13300,26 @@ function WebGLPrograms(renderer, cubemaps, cubeuvmaps, extensions, capabilities,
         if (parameters.flatShading) _programLayers.enable(1);
         if (parameters.logarithmicDepthBuffer) _programLayers.enable(2);
         if (parameters.skinning) _programLayers.enable(3);
-        if (parameters.useVertexTexture) _programLayers.enable(4);
-        if (parameters.morphTargets) _programLayers.enable(5);
-        if (parameters.morphNormals) _programLayers.enable(6);
-        if (parameters.morphColors) _programLayers.enable(7);
-        if (parameters.premultipliedAlpha) _programLayers.enable(8);
-        if (parameters.shadowMapEnabled) _programLayers.enable(9);
-        if (parameters.physicallyCorrectLights) _programLayers.enable(10);
-        if (parameters.doubleSided) _programLayers.enable(11);
-        if (parameters.flipSided) _programLayers.enable(12);
-        if (parameters.depthPacking) _programLayers.enable(13);
-        if (parameters.dithering) _programLayers.enable(14);
-        if (parameters.specularIntensityMap) _programLayers.enable(15);
-        if (parameters.specularColorMap) _programLayers.enable(16);
-        if (parameters.transmission) _programLayers.enable(17);
-        if (parameters.transmissionMap) _programLayers.enable(18);
-        if (parameters.thicknessMap) _programLayers.enable(19);
-        if (parameters.sheen) _programLayers.enable(20);
-        if (parameters.sheenColorMap) _programLayers.enable(21);
-        if (parameters.sheenRoughnessMap) _programLayers.enable(22);
-        if (parameters.decodeVideoTexture) _programLayers.enable(23);
-        if (parameters.opaque) _programLayers.enable(24);
+        if (parameters.morphTargets) _programLayers.enable(4);
+        if (parameters.morphNormals) _programLayers.enable(5);
+        if (parameters.morphColors) _programLayers.enable(6);
+        if (parameters.premultipliedAlpha) _programLayers.enable(7);
+        if (parameters.shadowMapEnabled) _programLayers.enable(8);
+        if (parameters.physicallyCorrectLights) _programLayers.enable(9);
+        if (parameters.doubleSided) _programLayers.enable(10);
+        if (parameters.flipSided) _programLayers.enable(11);
+        if (parameters.useDepthPacking) _programLayers.enable(12);
+        if (parameters.dithering) _programLayers.enable(13);
+        if (parameters.specularIntensityMap) _programLayers.enable(14);
+        if (parameters.specularColorMap) _programLayers.enable(15);
+        if (parameters.transmission) _programLayers.enable(16);
+        if (parameters.transmissionMap) _programLayers.enable(17);
+        if (parameters.thicknessMap) _programLayers.enable(18);
+        if (parameters.sheen) _programLayers.enable(19);
+        if (parameters.sheenColorMap) _programLayers.enable(20);
+        if (parameters.sheenRoughnessMap) _programLayers.enable(21);
+        if (parameters.decodeVideoTexture) _programLayers.enable(22);
+        if (parameters.opaque) _programLayers.enable(23);
         array.push(_programLayers.mask);
     }
     function getUniforms(material) {
@@ -13786,7 +13852,6 @@ function WebGLLights(extensions, capabilities) {
                 const uniforms = state.hemi[hemiLength];
                 uniforms.direction.setFromMatrixPosition(light.matrixWorld);
                 uniforms.direction.transformDirection(viewMatrix);
-                uniforms.direction.normalize();
                 hemiLength++;
             }
         }
@@ -13866,7 +13931,6 @@ class MeshDepthMaterial extends Material {
         this.displacementBias = 0;
         this.wireframe = false;
         this.wireframeLinewidth = 1;
-        this.fog = false;
         this.setValues(parameters);
     }
     copy(source) {
@@ -13895,7 +13959,6 @@ class MeshDistanceMaterial extends Material {
         this.displacementMap = null;
         this.displacementScale = 1;
         this.displacementBias = 0;
-        this.fog = false;
         this.setValues(parameters);
     }
     copy(source) {
@@ -15129,7 +15192,7 @@ function WebGLTextures(_gl, extensions, state, properties, capabilities, utils, 
             let mipmap;
             const mipmaps = texture.mipmaps;
             const useTexStorage = isWebGL2 && texture.isVideoTexture !== true;
-            const allocateMemory = textureProperties.__version === undefined;
+            const allocateMemory = textureProperties.__version === undefined || forceUpload === true;
             const levels = getMipLevels(texture, image, supportsMips);
             if (texture.isDepthTexture) {
                 // populate depth texture with dummy data
@@ -15165,8 +15228,10 @@ function WebGLTextures(_gl, extensions, state, properties, capabilities, utils, 
                     }
                 }
                 //
-                if (useTexStorage && allocateMemory) state.texStorage2D(3553, 1, glInternalFormat, image.width, image.height);
-                else state.texImage2D(3553, 0, glInternalFormat, image.width, image.height, 0, glFormat, glType, null);
+                if (allocateMemory) {
+                    if (useTexStorage) state.texStorage2D(3553, 1, glInternalFormat, image.width, image.height);
+                    else state.texImage2D(3553, 0, glInternalFormat, image.width, image.height, 0, glFormat, glType, null);
+                }
             } else if (texture.isDataTexture) {
                 // use manually created mipmaps if available
                 // if there are no manual mipmaps
@@ -15206,8 +15271,17 @@ function WebGLTextures(_gl, extensions, state, properties, capabilities, utils, 
                     state.texSubImage3D(32879, 0, 0, 0, 0, image.width, image.height, image.depth, glFormat, glType, image.data);
                 } else state.texImage3D(32879, 0, glInternalFormat, image.width, image.height, image.depth, 0, glFormat, glType, image.data);
             } else if (texture.isFramebufferTexture) {
-                if (useTexStorage && allocateMemory) state.texStorage2D(3553, levels, glInternalFormat, image.width, image.height);
-                else state.texImage2D(3553, 0, glInternalFormat, image.width, image.height, 0, glFormat, glType, null);
+                if (allocateMemory) {
+                    if (useTexStorage) state.texStorage2D(3553, levels, glInternalFormat, image.width, image.height);
+                    else {
+                        let width = image.width, height = image.height;
+                        for(let i137 = 0; i137 < levels; i137++){
+                            state.texImage2D(3553, i137, glInternalFormat, width, height, 0, glFormat, glType, null);
+                            width >>= 1;
+                            height >>= 1;
+                        }
+                    }
+                }
             } else {
                 // regular Texture (image, video, canvas)
                 // use manually created mipmaps if available
@@ -15215,10 +15289,10 @@ function WebGLTextures(_gl, extensions, state, properties, capabilities, utils, 
                 // set 0 level mipmap and then use GL to generate other mipmap levels
                 if (mipmaps.length > 0 && supportsMips) {
                     if (useTexStorage && allocateMemory) state.texStorage2D(3553, levels, glInternalFormat, mipmaps[0].width, mipmaps[0].height);
-                    for(let i137 = 0, il = mipmaps.length; i137 < il; i137++){
-                        mipmap = mipmaps[i137];
-                        if (useTexStorage) state.texSubImage2D(3553, i137, 0, 0, glFormat, glType, mipmap);
-                        else state.texImage2D(3553, i137, glInternalFormat, glFormat, glType, mipmap);
+                    for(let i138 = 0, il = mipmaps.length; i138 < il; i138++){
+                        mipmap = mipmaps[i138];
+                        if (useTexStorage) state.texSubImage2D(3553, i138, 0, 0, glFormat, glType, mipmap);
+                        else state.texImage2D(3553, i138, glInternalFormat, glFormat, glType, mipmap);
                     }
                     texture.generateMipmaps = false;
                 } else if (useTexStorage) {
@@ -15246,10 +15320,10 @@ function WebGLTextures(_gl, extensions, state, properties, capabilities, utils, 
             const isCompressed = texture.isCompressedTexture || texture.image[0].isCompressedTexture;
             const isDataTexture = texture.image[0] && texture.image[0].isDataTexture;
             const cubeImage = [];
-            for(let i138 = 0; i138 < 6; i138++){
-                if (!isCompressed && !isDataTexture) cubeImage[i138] = resizeImage(texture.image[i138], false, true, maxCubemapSize);
-                else cubeImage[i138] = isDataTexture ? texture.image[i138].image : texture.image[i138];
-                cubeImage[i138] = verifyColorSpace(texture, cubeImage[i138]);
+            for(let i139 = 0; i139 < 6; i139++){
+                if (!isCompressed && !isDataTexture) cubeImage[i139] = resizeImage(texture.image[i139], false, true, maxCubemapSize);
+                else cubeImage[i139] = isDataTexture ? texture.image[i139].image : texture.image[i139];
+                cubeImage[i139] = verifyColorSpace(texture, cubeImage[i139]);
             }
             const image = cubeImage[0], supportsMips = isPowerOfTwo$1(image) || isWebGL2, glFormat = utils.convert(texture.format, texture.encoding), glType = utils.convert(texture.type), glInternalFormat = getInternalFormat(texture.internalFormat, glFormat, glType, texture.encoding);
             const useTexStorage = isWebGL2 && texture.isVideoTexture !== true;
@@ -15259,17 +15333,17 @@ function WebGLTextures(_gl, extensions, state, properties, capabilities, utils, 
             let mipmaps;
             if (isCompressed) {
                 if (useTexStorage && allocateMemory) state.texStorage2D(34067, levels, glInternalFormat, image.width, image.height);
-                for(let i139 = 0; i139 < 6; i139++){
-                    mipmaps = cubeImage[i139].mipmaps;
+                for(let i140 = 0; i140 < 6; i140++){
+                    mipmaps = cubeImage[i140].mipmaps;
                     for(let j = 0; j < mipmaps.length; j++){
                         const mipmap = mipmaps[j];
                         if (texture.format !== RGBAFormat) {
                             if (glFormat !== null) {
-                                if (useTexStorage) state.compressedTexSubImage2D(34069 + i139, j, 0, 0, mipmap.width, mipmap.height, glFormat, mipmap.data);
-                                else state.compressedTexImage2D(34069 + i139, j, glInternalFormat, mipmap.width, mipmap.height, 0, mipmap.data);
+                                if (useTexStorage) state.compressedTexSubImage2D(34069 + i140, j, 0, 0, mipmap.width, mipmap.height, glFormat, mipmap.data);
+                                else state.compressedTexImage2D(34069 + i140, j, glInternalFormat, mipmap.width, mipmap.height, 0, mipmap.data);
                             } else console.warn('THREE.WebGLRenderer: Attempt to load unsupported compressed texture format in .setTextureCube()');
-                        } else if (useTexStorage) state.texSubImage2D(34069 + i139, j, 0, 0, mipmap.width, mipmap.height, glFormat, glType, mipmap.data);
-                        else state.texImage2D(34069 + i139, j, glInternalFormat, mipmap.width, mipmap.height, 0, glFormat, glType, mipmap.data);
+                        } else if (useTexStorage) state.texSubImage2D(34069 + i140, j, 0, 0, mipmap.width, mipmap.height, glFormat, glType, mipmap.data);
+                        else state.texImage2D(34069 + i140, j, glInternalFormat, mipmap.width, mipmap.height, 0, glFormat, glType, mipmap.data);
                     }
                 }
             } else {
@@ -15281,22 +15355,22 @@ function WebGLTextures(_gl, extensions, state, properties, capabilities, utils, 
                     if (mipmaps.length > 0) levels++;
                     state.texStorage2D(34067, levels, glInternalFormat, cubeImage[0].width, cubeImage[0].height);
                 }
-                for(let i140 = 0; i140 < 6; i140++)if (isDataTexture) {
-                    if (useTexStorage) state.texSubImage2D(34069 + i140, 0, 0, 0, cubeImage[i140].width, cubeImage[i140].height, glFormat, glType, cubeImage[i140].data);
-                    else state.texImage2D(34069 + i140, 0, glInternalFormat, cubeImage[i140].width, cubeImage[i140].height, 0, glFormat, glType, cubeImage[i140].data);
+                for(let i141 = 0; i141 < 6; i141++)if (isDataTexture) {
+                    if (useTexStorage) state.texSubImage2D(34069 + i141, 0, 0, 0, cubeImage[i141].width, cubeImage[i141].height, glFormat, glType, cubeImage[i141].data);
+                    else state.texImage2D(34069 + i141, 0, glInternalFormat, cubeImage[i141].width, cubeImage[i141].height, 0, glFormat, glType, cubeImage[i141].data);
                     for(let j = 0; j < mipmaps.length; j++){
                         const mipmap = mipmaps[j];
-                        const mipmapImage = mipmap.image[i140].image;
-                        if (useTexStorage) state.texSubImage2D(34069 + i140, j + 1, 0, 0, mipmapImage.width, mipmapImage.height, glFormat, glType, mipmapImage.data);
-                        else state.texImage2D(34069 + i140, j + 1, glInternalFormat, mipmapImage.width, mipmapImage.height, 0, glFormat, glType, mipmapImage.data);
+                        const mipmapImage = mipmap.image[i141].image;
+                        if (useTexStorage) state.texSubImage2D(34069 + i141, j + 1, 0, 0, mipmapImage.width, mipmapImage.height, glFormat, glType, mipmapImage.data);
+                        else state.texImage2D(34069 + i141, j + 1, glInternalFormat, mipmapImage.width, mipmapImage.height, 0, glFormat, glType, mipmapImage.data);
                     }
                 } else {
-                    if (useTexStorage) state.texSubImage2D(34069 + i140, 0, 0, 0, glFormat, glType, cubeImage[i140]);
-                    else state.texImage2D(34069 + i140, 0, glInternalFormat, glFormat, glType, cubeImage[i140]);
+                    if (useTexStorage) state.texSubImage2D(34069 + i141, 0, 0, 0, glFormat, glType, cubeImage[i141]);
+                    else state.texImage2D(34069 + i141, 0, glInternalFormat, glFormat, glType, cubeImage[i141]);
                     for(let j = 0; j < mipmaps.length; j++){
                         const mipmap = mipmaps[j];
-                        if (useTexStorage) state.texSubImage2D(34069 + i140, j + 1, 0, 0, glFormat, glType, mipmap.image[i140]);
-                        else state.texImage2D(34069 + i140, j + 1, glInternalFormat, glFormat, glType, mipmap.image[i140]);
+                        if (useTexStorage) state.texSubImage2D(34069 + i141, j + 1, 0, 0, glFormat, glType, mipmap.image[i141]);
+                        else state.texImage2D(34069 + i141, j + 1, glInternalFormat, glFormat, glType, mipmap.image[i141]);
                     }
                 }
             }
@@ -15390,10 +15464,10 @@ function WebGLTextures(_gl, extensions, state, properties, capabilities, utils, 
             setupDepthTexture(renderTargetProperties.__webglFramebuffer, renderTarget);
         } else if (isCube) {
             renderTargetProperties.__webglDepthbuffer = [];
-            for(let i141 = 0; i141 < 6; i141++){
-                state.bindFramebuffer(36160, renderTargetProperties.__webglFramebuffer[i141]);
-                renderTargetProperties.__webglDepthbuffer[i141] = _gl.createRenderbuffer();
-                setupRenderBufferStorage(renderTargetProperties.__webglDepthbuffer[i141], renderTarget, false);
+            for(let i142 = 0; i142 < 6; i142++){
+                state.bindFramebuffer(36160, renderTargetProperties.__webglFramebuffer[i142]);
+                renderTargetProperties.__webglDepthbuffer[i142] = _gl.createRenderbuffer();
+                setupRenderBufferStorage(renderTargetProperties.__webglDepthbuffer[i142], renderTarget, false);
             }
         } else {
             state.bindFramebuffer(36160, renderTargetProperties.__webglFramebuffer);
@@ -15425,14 +15499,14 @@ function WebGLTextures(_gl, extensions, state, properties, capabilities, utils, 
         // Setup framebuffer
         if (isCube) {
             renderTargetProperties.__webglFramebuffer = [];
-            for(let i142 = 0; i142 < 6; i142++)renderTargetProperties.__webglFramebuffer[i142] = _gl.createFramebuffer();
+            for(let i143 = 0; i143 < 6; i143++)renderTargetProperties.__webglFramebuffer[i143] = _gl.createFramebuffer();
         } else {
             renderTargetProperties.__webglFramebuffer = _gl.createFramebuffer();
             if (isMultipleRenderTargets) {
                 if (capabilities.drawBuffers) {
                     const textures = renderTarget.texture;
-                    for(let i143 = 0, il = textures.length; i143 < il; i143++){
-                        const attachmentProperties = properties.get(textures[i143]);
+                    for(let i144 = 0, il = textures.length; i144 < il; i144++){
+                        const attachmentProperties = properties.get(textures[i144]);
                         if (attachmentProperties.__webglTexture === undefined) {
                             attachmentProperties.__webglTexture = _gl.createTexture();
                             info.memory.textures++;
@@ -15462,17 +15536,17 @@ function WebGLTextures(_gl, extensions, state, properties, capabilities, utils, 
         if (isCube) {
             state.bindTexture(34067, textureProperties.__webglTexture);
             setTextureParameters(34067, texture, supportsMips);
-            for(let i144 = 0; i144 < 6; i144++)setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer[i144], renderTarget, texture, 36064, 34069 + i144);
+            for(let i145 = 0; i145 < 6; i145++)setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer[i145], renderTarget, texture, 36064, 34069 + i145);
             if (textureNeedsGenerateMipmaps(texture, supportsMips)) generateMipmap(34067);
             state.unbindTexture();
         } else if (isMultipleRenderTargets) {
             const textures = renderTarget.texture;
-            for(let i145 = 0, il = textures.length; i145 < il; i145++){
-                const attachment = textures[i145];
+            for(let i146 = 0, il = textures.length; i146 < il; i146++){
+                const attachment = textures[i146];
                 const attachmentProperties = properties.get(attachment);
                 state.bindTexture(3553, attachmentProperties.__webglTexture);
                 setTextureParameters(3553, attachment, supportsMips);
-                setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer, renderTarget, attachment, 36064 + i145, 3553);
+                setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer, renderTarget, attachment, 36064 + i146, 3553);
                 if (textureNeedsGenerateMipmaps(attachment, supportsMips)) generateMipmap(3553);
             }
             state.unbindTexture();
@@ -15496,8 +15570,8 @@ function WebGLTextures(_gl, extensions, state, properties, capabilities, utils, 
         const textures = renderTarget.isWebGLMultipleRenderTargets === true ? renderTarget.texture : [
             renderTarget.texture
         ];
-        for(let i146 = 0, il = textures.length; i146 < il; i146++){
-            const texture = textures[i146];
+        for(let i147 = 0, il = textures.length; i147 < il; i147++){
+            const texture = textures[i147];
             if (textureNeedsGenerateMipmaps(texture, supportsMips)) {
                 const target = renderTarget.isWebGLCubeRenderTarget ? 34067 : 3553;
                 const webglTexture = properties.get(texture).__webglTexture;
@@ -15711,6 +15785,8 @@ function WebGLUtils(gl, extensions, capabilities) {
             if (extension !== null) return extension.UNSIGNED_INT_24_8_WEBGL;
             else return null;
         }
+        // if "p" can't be resolved, assume the user defines a WebGL constant as a string (fallback/workaround for packed RGB formats)
+        return gl[p] !== undefined ? gl[p] : null;
     }
     return {
         convert: convert
@@ -15907,6 +15983,7 @@ class WebXRManager extends EventDispatcher {
         let framebufferScaleFactor = 1.0;
         let referenceSpace = null;
         let referenceSpaceType = 'local-floor';
+        let customReferenceSpace = null;
         let pose = null;
         let glBinding = null;
         let glProjLayer = null;
@@ -15999,7 +16076,10 @@ class WebXRManager extends EventDispatcher {
             if (scope.isPresenting === true) console.warn('THREE.WebXRManager: Cannot change reference space type while presenting.');
         };
         this.getReferenceSpace = function() {
-            return referenceSpace;
+            return customReferenceSpace || referenceSpace;
+        };
+        this.setReferenceSpace = function(space) {
+            customReferenceSpace = space;
         };
         this.getBaseLayer = function() {
             return glProjLayer !== null ? glProjLayer : glBaseLayer;
@@ -16089,11 +16169,14 @@ class WebXRManager extends EventDispatcher {
         };
         function onInputSourcesChange(event) {
             const inputSources = session.inputSources;
-            // Assign inputSources to available controllers
-            for(let i149 = 0; i149 < controllers.length; i149++)inputSourcesMap.set(inputSources[i149], controllers[i149]);
+            // Assign controllers to available inputSources
+            for(let i150 = 0; i150 < inputSources.length; i150++){
+                const index = inputSources[i150].handedness === 'right' ? 1 : 0;
+                inputSourcesMap.set(inputSources[i150], controllers[index]);
+            }
             // Notify disconnected
-            for(let i147 = 0; i147 < event.removed.length; i147++){
-                const inputSource = event.removed[i147];
+            for(let i148 = 0; i148 < event.removed.length; i148++){
+                const inputSource = event.removed[i148];
                 const controller = inputSourcesMap.get(inputSource);
                 if (controller) {
                     controller.dispatchEvent({
@@ -16104,8 +16187,8 @@ class WebXRManager extends EventDispatcher {
                 }
             }
             // Notify connected
-            for(let i148 = 0; i148 < event.added.length; i148++){
-                const inputSource = event.added[i148];
+            for(let i149 = 0; i149 < event.added.length; i149++){
+                const inputSource = event.added[i149];
                 const controller = inputSourcesMap.get(inputSource);
                 if (controller) controller.dispatchEvent({
                     type: 'connected',
@@ -16180,7 +16263,7 @@ class WebXRManager extends EventDispatcher {
             const parent = camera.parent;
             const cameras = cameraVR.cameras;
             updateCamera(cameraVR, parent);
-            for(let i151 = 0; i151 < cameras.length; i151++)updateCamera(cameras[i151], parent);
+            for(let i152 = 0; i152 < cameras.length; i152++)updateCamera(cameras[i152], parent);
             cameraVR.matrixWorld.decompose(cameraVR.position, cameraVR.quaternion, cameraVR.scale);
             // update user camera and its children
             camera.position.copy(cameraVR.position);
@@ -16189,7 +16272,7 @@ class WebXRManager extends EventDispatcher {
             camera.matrix.copy(cameraVR.matrix);
             camera.matrixWorld.copy(cameraVR.matrixWorld);
             const children = camera.children;
-            for(let i150 = 0, l = children.length; i150 < l; i150++)children[i150].updateMatrixWorld(true);
+            for(let i151 = 0, l = children.length; i151 < l; i151++)children[i151].updateMatrixWorld(true);
             // update projection matrix for proper view frustum culling
             if (cameras.length === 2) setProjectionFromUnion(cameraVR, cameraL1, cameraR1);
             else // assume single camera setup (AR)
@@ -16212,7 +16295,7 @@ class WebXRManager extends EventDispatcher {
         // Animation Loop
         let onAnimationFrameCallback = null;
         function onAnimationFrame(time, frame) {
-            pose = frame.getViewerPose(referenceSpace);
+            pose = frame.getViewerPose(customReferenceSpace || referenceSpace);
             xrFrame = frame;
             if (pose !== null) {
                 const views = pose.views;
@@ -16226,33 +16309,33 @@ class WebXRManager extends EventDispatcher {
                     cameraVR.cameras.length = 0;
                     cameraVRNeedsUpdate = true;
                 }
-                for(let i152 = 0; i152 < views.length; i152++){
-                    const view = views[i152];
+                for(let i153 = 0; i153 < views.length; i153++){
+                    const view = views[i153];
                     let viewport = null;
                     if (glBaseLayer !== null) viewport = glBaseLayer.getViewport(view);
                     else {
                         const glSubImage = glBinding.getViewSubImage(glProjLayer, view);
                         viewport = glSubImage.viewport;
                         // For side-by-side projection, we only produce a single texture for both eyes.
-                        if (i152 === 0) {
+                        if (i153 === 0) {
                             renderer.setRenderTargetTextures(newRenderTarget, glSubImage.colorTexture, glProjLayer.ignoreDepthValues ? undefined : glSubImage.depthStencilTexture);
                             renderer.setRenderTarget(newRenderTarget);
                         }
                     }
-                    const camera = cameras1[i152];
+                    const camera = cameras1[i153];
                     camera.matrix.fromArray(view.transform.matrix);
                     camera.projectionMatrix.fromArray(view.projectionMatrix);
                     camera.viewport.set(viewport.x, viewport.y, viewport.width, viewport.height);
-                    if (i152 === 0) cameraVR.matrix.copy(camera.matrix);
+                    if (i153 === 0) cameraVR.matrix.copy(camera.matrix);
                     if (cameraVRNeedsUpdate === true) cameraVR.cameras.push(camera);
                 }
             }
             //
             const inputSources = session.inputSources;
-            for(let i153 = 0; i153 < controllers.length; i153++){
-                const controller = controllers[i153];
-                const inputSource = inputSources[i153];
-                controller.update(inputSource, frame, referenceSpace);
+            for(let i154 = 0; i154 < controllers.length; i154++){
+                const inputSource = inputSources[i154];
+                const controller = inputSourcesMap.get(inputSource);
+                if (controller !== undefined) controller.update(inputSource, frame, customReferenceSpace || referenceSpace);
             }
             if (onAnimationFrameCallback) onAnimationFrameCallback(time, frame);
             xrFrame = null;
@@ -16518,7 +16601,7 @@ function createCanvasElement() {
 function WebGLRenderer(parameters1 = {}) {
     const _canvas2 = parameters1.canvas !== undefined ? parameters1.canvas : createCanvasElement(), _context1 = parameters1.context !== undefined ? parameters1.context : null, _depth = parameters1.depth !== undefined ? parameters1.depth : true, _stencil = parameters1.stencil !== undefined ? parameters1.stencil : true, _antialias = parameters1.antialias !== undefined ? parameters1.antialias : false, _premultipliedAlpha = parameters1.premultipliedAlpha !== undefined ? parameters1.premultipliedAlpha : true, _preserveDrawingBuffer = parameters1.preserveDrawingBuffer !== undefined ? parameters1.preserveDrawingBuffer : false, _powerPreference = parameters1.powerPreference !== undefined ? parameters1.powerPreference : 'default', _failIfMajorPerformanceCaveat = parameters1.failIfMajorPerformanceCaveat !== undefined ? parameters1.failIfMajorPerformanceCaveat : false;
     let _alpha;
-    if (parameters1.context !== undefined) _alpha = _context1.getContextAttributes().alpha;
+    if (_context1 !== null) _alpha = _context1.getContextAttributes().alpha;
     else _alpha = parameters1.alpha !== undefined ? parameters1.alpha : false;
     let currentRenderList1 = null;
     let currentRenderState = null;
@@ -16597,8 +16680,8 @@ function WebGLRenderer(parameters1 = {}) {
     // initialize
     let _gl = _context1;
     function getContext(contextNames, contextAttributes) {
-        for(let i154 = 0; i154 < contextNames.length; i154++){
-            const contextName = contextNames[i154];
+        for(let i155 = 0; i155 < contextNames.length; i155++){
+            const contextName = contextNames[i155];
             const context = _canvas2.getContext(contextName, contextAttributes);
             if (context !== null) return context;
         }
@@ -16934,8 +17017,8 @@ function WebGLRenderer(parameters1 = {}) {
         scene.traverse(function(object) {
             const material = object.material;
             if (material) {
-                if (Array.isArray(material)) for(let i155 = 0; i155 < material.length; i155++){
-                    const material2 = material[i155];
+                if (Array.isArray(material)) for(let i156 = 0; i156 < material.length; i156++){
+                    const material2 = material[i156];
                     getProgram(material2, scene, object);
                 }
                 else getProgram(material, scene, object);
@@ -17008,8 +17091,8 @@ function WebGLRenderer(parameters1 = {}) {
         currentRenderState.setupLights(_this.physicallyCorrectLights);
         if (camera.isArrayCamera) {
             const cameras = camera.cameras;
-            for(let i156 = 0, l = cameras.length; i156 < l; i156++){
-                const camera2 = cameras[i156];
+            for(let i157 = 0, l = cameras.length; i157 < l; i157++){
+                const camera2 = cameras[i157];
                 renderScene(currentRenderList1, scene, camera2, camera2.viewport);
             }
         } else renderScene(currentRenderList1, scene, camera);
@@ -17064,8 +17147,8 @@ function WebGLRenderer(parameters1 = {}) {
                     const material = object.material;
                     if (Array.isArray(material)) {
                         const groups = geometry.groups;
-                        for(let i157 = 0, l = groups.length; i157 < l; i157++){
-                            const group = groups[i157];
+                        for(let i158 = 0, l = groups.length; i158 < l; i158++){
+                            const group = groups[i158];
                             const groupMaterial = material[group.materialIndex];
                             if (groupMaterial && groupMaterial.visible) currentRenderList1.push(object, geometry, groupMaterial, groupOrder, _vector3.z, group);
                         }
@@ -17074,7 +17157,7 @@ function WebGLRenderer(parameters1 = {}) {
             }
         }
         const children = object.children;
-        for(let i158 = 0, l = children.length; i158 < l; i158++)projectObject(children[i158], camera, groupOrder, sortObjects);
+        for(let i159 = 0, l = children.length; i159 < l; i159++)projectObject(children[i159], camera, groupOrder, sortObjects);
     }
     function renderScene(currentRenderList, scene, camera, viewport) {
         const opaqueObjects = currentRenderList.opaque;
@@ -17096,7 +17179,7 @@ function WebGLRenderer(parameters1 = {}) {
         const isWebGL2 = capabilities.isWebGL2;
         if (_transmissionRenderTarget === null) _transmissionRenderTarget = new WebGLRenderTarget(1, 1, {
             generateMipmaps: true,
-            type: utils.convert(HalfFloatType) !== null ? HalfFloatType : UnsignedByteType,
+            type: extensions.has('EXT_color_buffer_half_float') ? HalfFloatType : UnsignedByteType,
             minFilter: LinearMipmapLinearFilter,
             samples: isWebGL2 && _antialias === true ? 4 : 0
         });
@@ -17119,8 +17202,8 @@ function WebGLRenderer(parameters1 = {}) {
     }
     function renderObjects(renderList, scene, camera) {
         const overrideMaterial = scene.isScene === true ? scene.overrideMaterial : null;
-        for(let i159 = 0, l = renderList.length; i159 < l; i159++){
-            const renderItem = renderList[i159];
+        for(let i160 = 0, l = renderList.length; i160 < l; i160++){
+            const renderItem = renderList[i160];
             const object = renderItem.object;
             const geometry = renderItem.geometry;
             const material = overrideMaterial === null ? renderItem.material : overrideMaterial;
@@ -17263,7 +17346,7 @@ function WebGLRenderer(parameters1 = {}) {
             else if (object.isSkinnedMesh && materialProperties.skinning === false) needsProgramChange = true;
             else if (!object.isSkinnedMesh && materialProperties.skinning === true) needsProgramChange = true;
             else if (materialProperties.envMap !== envMap) needsProgramChange = true;
-            else if (material.fog && materialProperties.fog !== fog) needsProgramChange = true;
+            else if (material.fog === true && materialProperties.fog !== fog) needsProgramChange = true;
             else if (materialProperties.numClippingPlanes !== undefined && (materialProperties.numClippingPlanes !== clipping.numPlanes || materialProperties.numIntersection !== clipping.numIntersection)) needsProgramChange = true;
             else if (materialProperties.vertexAlphas !== vertexAlphas) needsProgramChange = true;
             else if (materialProperties.vertexTangents !== vertexTangents) needsProgramChange = true;
@@ -17324,7 +17407,7 @@ function WebGLRenderer(parameters1 = {}) {
                     if (skeleton.boneTexture === null) skeleton.computeBoneTexture();
                     p_uniforms.setValue(_gl, 'boneTexture', skeleton.boneTexture, textures);
                     p_uniforms.setValue(_gl, 'boneTextureSize', skeleton.boneTextureSize);
-                } else p_uniforms.setOptional(_gl, skeleton, 'boneMatrices');
+                } else console.warn('THREE.WebGLRenderer: SkinnedMesh can only be used with WebGL 2. With WebGL 1 OES_texture_float and vertex textures support is required.');
             }
         }
         const morphAttributes = geometry.morphAttributes;
@@ -17344,7 +17427,7 @@ function WebGLRenderer(parameters1 = {}) {
             // the GL state when required
             markUniformsLightsNeedsUpdate(m_uniforms, refreshLights);
             // refresh uniforms common to several materials
-            if (fog && material.fog) materials.refreshFogUniforms(m_uniforms, fog);
+            if (fog && material.fog === true) materials.refreshFogUniforms(m_uniforms, fog);
             materials.refreshMaterialUniforms(m_uniforms, material, _pixelRatio, _height, _transmissionRenderTarget);
             WebGLUniforms.upload(_gl, materialProperties.uniformsList, m_uniforms, textures);
         }
@@ -17684,7 +17767,7 @@ class InterleavedBuffer {
     copyAt(index1, attribute, index2) {
         index1 *= this.stride;
         index2 *= attribute.stride;
-        for(let i160 = 0, l = this.stride; i160 < l; i160++)this.array[index1 + i160] = attribute.array[index2 + i160];
+        for(let i161 = 0, l = this.stride; i161 < l; i161++)this.array[index1 + i161] = attribute.array[index2 + i161];
         return this;
     }
     set(value, offset = 0) {
@@ -17738,26 +17821,26 @@ class InterleavedBufferAttribute {
         this.data.needsUpdate = value;
     }
     applyMatrix4(m) {
-        for(let i161 = 0, l = this.data.count; i161 < l; i161++){
-            _vector$6.fromBufferAttribute(this, i161);
-            _vector$6.applyMatrix4(m);
-            this.setXYZ(i161, _vector$6.x, _vector$6.y, _vector$6.z);
-        }
-        return this;
-    }
-    applyNormalMatrix(m) {
-        for(let i162 = 0, l = this.count; i162 < l; i162++){
+        for(let i162 = 0, l = this.data.count; i162 < l; i162++){
             _vector$6.fromBufferAttribute(this, i162);
-            _vector$6.applyNormalMatrix(m);
+            _vector$6.applyMatrix4(m);
             this.setXYZ(i162, _vector$6.x, _vector$6.y, _vector$6.z);
         }
         return this;
     }
-    transformDirection(m) {
+    applyNormalMatrix(m) {
         for(let i163 = 0, l = this.count; i163 < l; i163++){
             _vector$6.fromBufferAttribute(this, i163);
-            _vector$6.transformDirection(m);
+            _vector$6.applyNormalMatrix(m);
             this.setXYZ(i163, _vector$6.x, _vector$6.y, _vector$6.z);
+        }
+        return this;
+    }
+    transformDirection(m) {
+        for(let i164 = 0, l = this.count; i164 < l; i164++){
+            _vector$6.fromBufferAttribute(this, i164);
+            _vector$6.transformDirection(m);
+            this.setXYZ(i164, _vector$6.x, _vector$6.y, _vector$6.z);
         }
         return this;
     }
@@ -17814,8 +17897,8 @@ class InterleavedBufferAttribute {
         if (data === undefined) {
             console.log('THREE.InterleavedBufferAttribute.clone(): Cloning an interlaved buffer attribute will deinterleave buffer data.');
             const array = [];
-            for(let i164 = 0; i164 < this.count; i164++){
-                const index = i164 * this.data.stride + this.offset;
+            for(let i165 = 0; i165 < this.count; i165++){
+                const index = i165 * this.data.stride + this.offset;
                 for(let j = 0; j < this.itemSize; j++)array.push(this.data.array[index + j]);
             }
             return new BufferAttribute(new this.array.constructor(array), this.itemSize, this.normalized);
@@ -17829,8 +17912,8 @@ class InterleavedBufferAttribute {
         if (data === undefined) {
             console.log('THREE.InterleavedBufferAttribute.toJSON(): Serializing an interlaved buffer attribute will deinterleave buffer data.');
             const array = [];
-            for(let i165 = 0; i165 < this.count; i165++){
-                const index = i165 * this.data.stride + this.offset;
+            for(let i166 = 0; i166 < this.count; i166++){
+                const index = i166 * this.data.stride + this.offset;
                 for(let j = 0; j < this.itemSize; j++)array.push(this.data.array[index + j]);
             }
             // deinterleave data and save it as an ordinary buffer attribute for now
@@ -17865,6 +17948,7 @@ class SpriteMaterial extends Material {
         this.rotation = 0;
         this.sizeAttenuation = true;
         this.transparent = true;
+        this.fog = true;
         this.setValues(parameters);
     }
     copy(source) {
@@ -17874,6 +17958,7 @@ class SpriteMaterial extends Material {
         this.alphaMap = source.alphaMap;
         this.rotation = source.rotation;
         this.sizeAttenuation = source.sizeAttenuation;
+        this.fog = source.fog;
         return this;
     }
 }
@@ -18017,8 +18102,8 @@ class LOD extends Object3D {
     copy(source) {
         super.copy(source, false);
         const levels = source.levels;
-        for(let i166 = 0, l = levels.length; i166 < l; i166++){
-            const level = levels[i166];
+        for(let i167 = 0, l = levels.length; i167 < l; i167++){
+            const level = levels[i167];
             this.addLevel(level.object.clone(), level.distance);
         }
         this.autoUpdate = source.autoUpdate;
@@ -18044,11 +18129,11 @@ class LOD extends Object3D {
     getObjectForDistance(distance) {
         const levels = this.levels;
         if (levels.length > 0) {
-            let i167, l;
-            for(i167 = 1, l = levels.length; i167 < l; i167++){
-                if (distance < levels[i167].distance) break;
+            let i168, l;
+            for(i168 = 1, l = levels.length; i168 < l; i168++){
+                if (distance < levels[i168].distance) break;
             }
-            return levels[i167 - 1].object;
+            return levels[i168 - 1].object;
         }
         return null;
     }
@@ -18067,15 +18152,15 @@ class LOD extends Object3D {
             _v2$1.setFromMatrixPosition(this.matrixWorld);
             const distance = _v1$2.distanceTo(_v2$1) / camera.zoom;
             levels[0].object.visible = true;
-            let i168, l;
-            for(i168 = 1, l = levels.length; i168 < l; i168++){
-                if (distance >= levels[i168].distance) {
-                    levels[i168 - 1].object.visible = false;
-                    levels[i168].object.visible = true;
+            let i169, l;
+            for(i169 = 1, l = levels.length; i169 < l; i169++){
+                if (distance >= levels[i169].distance) {
+                    levels[i169 - 1].object.visible = false;
+                    levels[i169].object.visible = true;
                 } else break;
             }
-            this._currentLevel = i168 - 1;
-            for(; i168 < l; i168++)levels[i168].object.visible = false;
+            this._currentLevel = i169 - 1;
+            for(; i169 < l; i169++)levels[i169].object.visible = false;
         }
     }
     toJSON(meta) {
@@ -18083,8 +18168,8 @@ class LOD extends Object3D {
         if (this.autoUpdate === false) data.object.autoUpdate = false;
         data.object.levels = [];
         const levels = this.levels;
-        for(let i169 = 0, l = levels.length; i169 < l; i169++){
-            const level = levels[i169];
+        for(let i170 = 0, l = levels.length; i170 < l; i170++){
+            const level = levels[i170];
             data.object.levels.push({
                 object: level.object.uuid,
                 distance: level.distance
@@ -18130,12 +18215,12 @@ class SkinnedMesh extends Mesh {
     normalizeSkinWeights() {
         const vector = new Vector4();
         const skinWeight = this.geometry.attributes.skinWeight;
-        for(let i170 = 0, l = skinWeight.count; i170 < l; i170++){
-            vector.fromBufferAttribute(skinWeight, i170);
+        for(let i171 = 0, l = skinWeight.count; i171 < l; i171++){
+            vector.fromBufferAttribute(skinWeight, i171);
             const scale = 1.0 / vector.manhattanLength();
             if (scale !== Infinity) vector.multiplyScalar(scale);
             else vector.set(1, 0, 0, 0); // do something reasonable
-            skinWeight.setXYZW(i170, vector.x, vector.y, vector.z, vector.w);
+            skinWeight.setXYZW(i171, vector.x, vector.y, vector.z, vector.w);
         }
     }
     updateMatrixWorld(force) {
@@ -18151,10 +18236,10 @@ class SkinnedMesh extends Mesh {
         _skinWeight.fromBufferAttribute(geometry.attributes.skinWeight, index);
         _basePosition.copy(target).applyMatrix4(this.bindMatrix);
         target.set(0, 0, 0);
-        for(let i171 = 0; i171 < 4; i171++){
-            const weight = _skinWeight.getComponent(i171);
+        for(let i172 = 0; i172 < 4; i172++){
+            const weight = _skinWeight.getComponent(i172);
             if (weight !== 0) {
-                const boneIndex = _skinIndex.getComponent(i171);
+                const boneIndex = _skinIndex.getComponent(i172);
                 _matrix.multiplyMatrices(skeleton.bones[boneIndex].matrixWorld, skeleton.boneInverses[boneIndex]);
                 target.addScaledVector(_vector$5.copy(_basePosition).applyMatrix4(_matrix), weight);
             }
@@ -18207,26 +18292,26 @@ class Skeleton {
         if (bones.length !== boneInverses.length) {
             console.warn('THREE.Skeleton: Number of inverse bone matrices does not match amount of bones.');
             this.boneInverses = [];
-            for(let i172 = 0, il = this.bones.length; i172 < il; i172++)this.boneInverses.push(new Matrix4());
+            for(let i173 = 0, il = this.bones.length; i173 < il; i173++)this.boneInverses.push(new Matrix4());
         }
     }
     calculateInverses() {
         this.boneInverses.length = 0;
-        for(let i173 = 0, il = this.bones.length; i173 < il; i173++){
+        for(let i174 = 0, il = this.bones.length; i174 < il; i174++){
             const inverse = new Matrix4();
-            if (this.bones[i173]) inverse.copy(this.bones[i173].matrixWorld).invert();
+            if (this.bones[i174]) inverse.copy(this.bones[i174].matrixWorld).invert();
             this.boneInverses.push(inverse);
         }
     }
     pose() {
         // recover the bind-time world matrices
-        for(let i175 = 0, il = this.bones.length; i175 < il; i175++){
-            const bone = this.bones[i175];
-            if (bone) bone.matrixWorld.copy(this.boneInverses[i175]).invert();
+        for(let i176 = 0, il = this.bones.length; i176 < il; i176++){
+            const bone = this.bones[i176];
+            if (bone) bone.matrixWorld.copy(this.boneInverses[i176]).invert();
         }
         // compute the local matrices, positions, rotations and scales
-        for(let i174 = 0, il6 = this.bones.length; i174 < il6; i174++){
-            const bone = this.bones[i174];
+        for(let i175 = 0, il6 = this.bones.length; i175 < il6; i175++){
+            const bone = this.bones[i175];
             if (bone) {
                 if (bone.parent && bone.parent.isBone) {
                     bone.matrix.copy(bone.parent.matrixWorld).invert();
@@ -18242,11 +18327,11 @@ class Skeleton {
         const boneMatrices = this.boneMatrices;
         const boneTexture = this.boneTexture;
         // flatten bone matrices to array
-        for(let i176 = 0, il = bones.length; i176 < il; i176++){
+        for(let i177 = 0, il = bones.length; i177 < il; i177++){
             // compute the offset between the current and the original transform
-            const matrix = bones[i176] ? bones[i176].matrixWorld : _identityMatrix;
-            _offsetMatrix.multiplyMatrices(matrix, boneInverses[i176]);
-            _offsetMatrix.toArray(boneMatrices, i176 * 16);
+            const matrix = bones[i177] ? bones[i177].matrixWorld : _identityMatrix;
+            _offsetMatrix.multiplyMatrices(matrix, boneInverses[i177]);
+            _offsetMatrix.toArray(boneMatrices, i177 * 16);
         }
         if (boneTexture !== null) boneTexture.needsUpdate = true;
     }
@@ -18273,8 +18358,8 @@ class Skeleton {
         return this;
     }
     getBoneByName(name) {
-        for(let i177 = 0, il = this.bones.length; i177 < il; i177++){
-            const bone = this.bones[i177];
+        for(let i178 = 0, il = this.bones.length; i178 < il; i178++){
+            const bone = this.bones[i178];
             if (bone.name === name) return bone;
         }
         return undefined;
@@ -18287,15 +18372,15 @@ class Skeleton {
     }
     fromJSON(json, bones) {
         this.uuid = json.uuid;
-        for(let i178 = 0, l = json.bones.length; i178 < l; i178++){
-            const uuid = json.bones[i178];
+        for(let i179 = 0, l = json.bones.length; i179 < l; i179++){
+            const uuid = json.bones[i179];
             let bone = bones[uuid];
             if (bone === undefined) {
                 console.warn('THREE.Skeleton: No bone found with UUID:', uuid);
                 bone = new Bone();
             }
             this.bones.push(bone);
-            this.boneInverses.push(new Matrix4().fromArray(json.boneInverses[i178]));
+            this.boneInverses.push(new Matrix4().fromArray(json.boneInverses[i179]));
         }
         this.init();
         return this;
@@ -18313,10 +18398,10 @@ class Skeleton {
         data.uuid = this.uuid;
         const bones = this.bones;
         const boneInverses = this.boneInverses;
-        for(let i179 = 0, l = bones.length; i179 < l; i179++){
-            const bone = bones[i179];
+        for(let i180 = 0, l = bones.length; i180 < l; i180++){
+            const bone = bones[i180];
             data.bones.push(bone.uuid);
-            const boneInverse = boneInverses[i179];
+            const boneInverse = boneInverses[i180];
             data.boneInverses.push(boneInverse.toArray());
         }
         return data;
@@ -18384,8 +18469,8 @@ class InstancedMesh extends Mesh {
             _mesh.matrixWorld = _instanceWorldMatrix;
             _mesh.raycast(raycaster, _instanceIntersects);
             // process the result of raycast
-            for(let i180 = 0, l = _instanceIntersects.length; i180 < l; i180++){
-                const intersect = _instanceIntersects[i180];
+            for(let i181 = 0, l = _instanceIntersects.length; i181 < l; i181++){
+                const intersect = _instanceIntersects[i181];
                 intersect.instanceId = instanceId;
                 intersect.object = this;
                 intersects4.push(intersect);
@@ -18416,6 +18501,7 @@ class LineBasicMaterial extends Material {
         this.linewidth = 1;
         this.linecap = 'round';
         this.linejoin = 'round';
+        this.fog = true;
         this.setValues(parameters);
     }
     copy(source) {
@@ -18424,6 +18510,7 @@ class LineBasicMaterial extends Material {
         this.linewidth = source.linewidth;
         this.linecap = source.linecap;
         this.linejoin = source.linejoin;
+        this.fog = source.fog;
         return this;
     }
 }
@@ -18456,11 +18543,11 @@ class Line extends Object3D {
                 const lineDistances = [
                     0
                 ];
-                for(let i181 = 1, l = positionAttribute.count; i181 < l; i181++){
-                    _start$1.fromBufferAttribute(positionAttribute, i181 - 1);
-                    _end$1.fromBufferAttribute(positionAttribute, i181);
-                    lineDistances[i181] = lineDistances[i181 - 1];
-                    lineDistances[i181] += _start$1.distanceTo(_end$1);
+                for(let i182 = 1, l = positionAttribute.count; i182 < l; i182++){
+                    _start$1.fromBufferAttribute(positionAttribute, i182 - 1);
+                    _end$1.fromBufferAttribute(positionAttribute, i182);
+                    lineDistances[i182] = lineDistances[i182 - 1];
+                    lineDistances[i182] += _start$1.distanceTo(_end$1);
                 }
                 geometry.setAttribute('lineDistance', new Float32BufferAttribute(lineDistances, 1));
             } else console.warn('THREE.Line.computeLineDistances(): Computation only possible with non-indexed BufferGeometry.');
@@ -18495,9 +18582,9 @@ class Line extends Object3D {
             if (index !== null) {
                 const start = Math.max(0, drawRange.start);
                 const end = Math.min(index.count, drawRange.start + drawRange.count);
-                for(let i182 = start, l = end - 1; i182 < l; i182 += step){
-                    const a = index.getX(i182);
-                    const b = index.getX(i182 + 1);
+                for(let i183 = start, l = end - 1; i183 < l; i183 += step){
+                    const a = index.getX(i183);
+                    const b = index.getX(i183 + 1);
                     vStart.fromBufferAttribute(positionAttribute, a);
                     vEnd.fromBufferAttribute(positionAttribute, b);
                     const distSq = _ray$1.distanceSqToSegment(vStart, vEnd, interRay, interSegment);
@@ -18510,7 +18597,7 @@ class Line extends Object3D {
                         // What do we want? intersection point on the ray or on the segment??
                         // point: raycaster.ray.at( distance ),
                         point: interSegment.clone().applyMatrix4(this.matrixWorld),
-                        index: i182,
+                        index: i183,
                         face: null,
                         faceIndex: null,
                         object: this
@@ -18519,9 +18606,9 @@ class Line extends Object3D {
             } else {
                 const start = Math.max(0, drawRange.start);
                 const end = Math.min(positionAttribute.count, drawRange.start + drawRange.count);
-                for(let i183 = start, l = end - 1; i183 < l; i183 += step){
-                    vStart.fromBufferAttribute(positionAttribute, i183);
-                    vEnd.fromBufferAttribute(positionAttribute, i183 + 1);
+                for(let i184 = start, l = end - 1; i184 < l; i184 += step){
+                    vStart.fromBufferAttribute(positionAttribute, i184);
+                    vEnd.fromBufferAttribute(positionAttribute, i184 + 1);
                     const distSq = _ray$1.distanceSqToSegment(vStart, vEnd, interRay, interSegment);
                     if (distSq > localThresholdSq) continue;
                     interRay.applyMatrix4(this.matrixWorld); //Move back to world space for distance calculation
@@ -18532,7 +18619,7 @@ class Line extends Object3D {
                         // What do we want? intersection point on the ray or on the segment??
                         // point: raycaster.ray.at( distance ),
                         point: interSegment.clone().applyMatrix4(this.matrixWorld),
-                        index: i183,
+                        index: i184,
                         face: null,
                         faceIndex: null,
                         object: this
@@ -18579,11 +18666,11 @@ class LineSegments extends Line {
             if (geometry.index === null) {
                 const positionAttribute = geometry.attributes.position;
                 const lineDistances = [];
-                for(let i184 = 0, l = positionAttribute.count; i184 < l; i184 += 2){
-                    _start.fromBufferAttribute(positionAttribute, i184);
-                    _end.fromBufferAttribute(positionAttribute, i184 + 1);
-                    lineDistances[i184] = i184 === 0 ? 0 : lineDistances[i184 - 1];
-                    lineDistances[i184 + 1] = lineDistances[i184] + _start.distanceTo(_end);
+                for(let i185 = 0, l = positionAttribute.count; i185 < l; i185 += 2){
+                    _start.fromBufferAttribute(positionAttribute, i185);
+                    _end.fromBufferAttribute(positionAttribute, i185 + 1);
+                    lineDistances[i185] = i185 === 0 ? 0 : lineDistances[i185 - 1];
+                    lineDistances[i185 + 1] = lineDistances[i185] + _start.distanceTo(_end);
                 }
                 geometry.setAttribute('lineDistance', new Float32BufferAttribute(lineDistances, 1));
             } else console.warn('THREE.LineSegments.computeLineDistances(): Computation only possible with non-indexed BufferGeometry.');
@@ -18608,6 +18695,7 @@ class PointsMaterial extends Material {
         this.alphaMap = null;
         this.size = 1;
         this.sizeAttenuation = true;
+        this.fog = true;
         this.setValues(parameters);
     }
     copy(source) {
@@ -18617,6 +18705,7 @@ class PointsMaterial extends Material {
         this.alphaMap = source.alphaMap;
         this.size = source.size;
         this.sizeAttenuation = source.sizeAttenuation;
+        this.fog = source.fog;
         return this;
     }
 }
@@ -18662,17 +18751,17 @@ class Points extends Object3D {
             if (index !== null) {
                 const start = Math.max(0, drawRange.start);
                 const end = Math.min(index.count, drawRange.start + drawRange.count);
-                for(let i185 = start, il = end; i185 < il; i185++){
-                    const a = index.getX(i185);
+                for(let i186 = start, il = end; i186 < il; i186++){
+                    const a = index.getX(i186);
                     _position$2.fromBufferAttribute(positionAttribute, a);
                     testPoint(_position$2, a, localThresholdSq, matrixWorld, raycaster, intersects6, this);
                 }
             } else {
                 const start = Math.max(0, drawRange.start);
                 const end = Math.min(positionAttribute.count, drawRange.start + drawRange.count);
-                for(let i186 = start, l = end; i186 < l; i186++){
-                    _position$2.fromBufferAttribute(positionAttribute, i186);
-                    testPoint(_position$2, i186, localThresholdSq, matrixWorld, raycaster, intersects6, this);
+                for(let i187 = start, l = end; i187 < l; i187++){
+                    _position$2.fromBufferAttribute(positionAttribute, i187);
+                    testPoint(_position$2, i187, localThresholdSq, matrixWorld, raycaster, intersects6, this);
                 }
             }
         } else console.error('THREE.Points.raycast() no longer supports THREE.Geometry. Use THREE.BufferGeometry instead.');
@@ -18866,7 +18955,7 @@ CanvasTexture.prototype.isCanvasTexture = true;
     // Given u ( 0 .. 1 ), get a t to find p. This gives you points which are equidistant
     getUtoTmapping(u, distance) {
         const arcLengths = this.getLengths();
-        let i187 = 0;
+        let i188 = 0;
         const il = arcLengths.length;
         let targetArcLength; // The targeted u distance value to get
         if (distance) targetArcLength = distance;
@@ -18874,26 +18963,26 @@ CanvasTexture.prototype.isCanvasTexture = true;
         // binary search for the index with largest value smaller than target u distance
         let low = 0, high = il - 1, comparison;
         while(low <= high){
-            i187 = Math.floor(low + (high - low) / 2); // less likely to overflow, though probably not issue here, JS doesn't really have integers, all numbers are floats
-            comparison = arcLengths[i187] - targetArcLength;
-            if (comparison < 0) low = i187 + 1;
-            else if (comparison > 0) high = i187 - 1;
+            i188 = Math.floor(low + (high - low) / 2); // less likely to overflow, though probably not issue here, JS doesn't really have integers, all numbers are floats
+            comparison = arcLengths[i188] - targetArcLength;
+            if (comparison < 0) low = i188 + 1;
+            else if (comparison > 0) high = i188 - 1;
             else {
-                high = i187;
+                high = i188;
                 break;
             // DONE
             }
         }
-        i187 = high;
-        if (arcLengths[i187] === targetArcLength) return i187 / (il - 1);
+        i188 = high;
+        if (arcLengths[i188] === targetArcLength) return i188 / (il - 1);
         // we could get finer grain at lengths, or use simple interpolation between two points
-        const lengthBefore = arcLengths[i187];
-        const lengthAfter = arcLengths[i187 + 1];
+        const lengthBefore = arcLengths[i188];
+        const lengthAfter = arcLengths[i188 + 1];
         const segmentLength = lengthAfter - lengthBefore;
         // determine where we are between the 'before' and 'after' points
         const segmentFraction = (targetArcLength - lengthBefore) / segmentLength;
         // add that fractional amount to t
-        const t = (i187 + segmentFraction) / (il - 1);
+        const t = (i188 + segmentFraction) / (il - 1);
         return t;
     }
     // Returns a unit vector tangent at t
@@ -18926,9 +19015,9 @@ CanvasTexture.prototype.isCanvasTexture = true;
         const vec = new Vector3();
         const mat = new Matrix4();
         // compute the tangent vectors for each segment on the curve
-        for(let i189 = 0; i189 <= segments; i189++){
-            const u = i189 / segments;
-            tangents[i189] = this.getTangentAt(u, new Vector3());
+        for(let i190 = 0; i190 <= segments; i190++){
+            const u = i190 / segments;
+            tangents[i190] = this.getTangentAt(u, new Vector3());
         }
         // select an initial normal vector perpendicular to the first tangent vector,
         // and in the direction of the minimum tangent xyz component
@@ -18951,26 +19040,26 @@ CanvasTexture.prototype.isCanvasTexture = true;
         normals[0].crossVectors(tangents[0], vec);
         binormals[0].crossVectors(tangents[0], normals[0]);
         // compute the slowly-varying normal and binormal vectors for each segment on the curve
-        for(let i188 = 1; i188 <= segments; i188++){
-            normals[i188] = normals[i188 - 1].clone();
-            binormals[i188] = binormals[i188 - 1].clone();
-            vec.crossVectors(tangents[i188 - 1], tangents[i188]);
+        for(let i189 = 1; i189 <= segments; i189++){
+            normals[i189] = normals[i189 - 1].clone();
+            binormals[i189] = binormals[i189 - 1].clone();
+            vec.crossVectors(tangents[i189 - 1], tangents[i189]);
             if (vec.length() > Number.EPSILON) {
                 vec.normalize();
-                const theta = Math.acos(clamp(tangents[i188 - 1].dot(tangents[i188]), -1, 1)); // clamp for floating pt errors
-                normals[i188].applyMatrix4(mat.makeRotationAxis(vec, theta));
+                const theta = Math.acos(clamp(tangents[i189 - 1].dot(tangents[i189]), -1, 1)); // clamp for floating pt errors
+                normals[i189].applyMatrix4(mat.makeRotationAxis(vec, theta));
             }
-            binormals[i188].crossVectors(tangents[i188], normals[i188]);
+            binormals[i189].crossVectors(tangents[i189], normals[i189]);
         }
         // if the curve is closed, postprocess the vectors so the first and last normal vectors are the same
         if (closed === true) {
             let theta = Math.acos(clamp(normals[0].dot(normals[segments]), -1, 1));
             theta /= segments;
             if (tangents[0].dot(vec.crossVectors(normals[0], normals[segments])) > 0) theta = -theta;
-            for(let i190 = 1; i190 <= segments; i190++){
+            for(let i191 = 1; i191 <= segments; i191++){
                 // twist a little...
-                normals[i190].applyMatrix4(mat.makeRotationAxis(tangents[i190], theta * i190));
-                binormals[i190].crossVectors(tangents[i190], normals[i190]);
+                normals[i191].applyMatrix4(mat.makeRotationAxis(tangents[i191], theta * i191));
+                binormals[i191].crossVectors(tangents[i191], normals[i191]);
             }
         }
         return {
@@ -19204,8 +19293,8 @@ class CatmullRomCurve3 extends Curve {
     copy(source) {
         super.copy(source);
         this.points = [];
-        for(let i191 = 0, l = source.points.length; i191 < l; i191++){
-            const point = source.points[i191];
+        for(let i192 = 0, l = source.points.length; i192 < l; i192++){
+            const point = source.points[i192];
             this.points.push(point.clone());
         }
         this.closed = source.closed;
@@ -19216,8 +19305,8 @@ class CatmullRomCurve3 extends Curve {
     toJSON() {
         const data = super.toJSON();
         data.points = [];
-        for(let i192 = 0, l = this.points.length; i192 < l; i192++){
-            const point = this.points[i192];
+        for(let i193 = 0, l = this.points.length; i193 < l; i193++){
+            const point = this.points[i193];
             data.points.push(point.toArray());
         }
         data.closed = this.closed;
@@ -19228,8 +19317,8 @@ class CatmullRomCurve3 extends Curve {
     fromJSON(json) {
         super.fromJSON(json);
         this.points = [];
-        for(let i193 = 0, l = json.points.length; i193 < l; i193++){
-            const point = json.points[i193];
+        for(let i194 = 0, l = json.points.length; i194 < l; i194++){
+            const point = json.points[i194];
             this.points.push(new Vector3().fromArray(point));
         }
         this.closed = json.closed;
@@ -19544,8 +19633,8 @@ class SplineCurve extends Curve {
     copy(source) {
         super.copy(source);
         this.points = [];
-        for(let i194 = 0, l = source.points.length; i194 < l; i194++){
-            const point = source.points[i194];
+        for(let i195 = 0, l = source.points.length; i195 < l; i195++){
+            const point = source.points[i195];
             this.points.push(point.clone());
         }
         return this;
@@ -19553,8 +19642,8 @@ class SplineCurve extends Curve {
     toJSON() {
         const data = super.toJSON();
         data.points = [];
-        for(let i195 = 0, l = this.points.length; i195 < l; i195++){
-            const point = this.points[i195];
+        for(let i196 = 0, l = this.points.length; i196 < l; i196++){
+            const point = this.points[i196];
             data.points.push(point.toArray());
         }
         return data;
@@ -19562,8 +19651,8 @@ class SplineCurve extends Curve {
     fromJSON(json) {
         super.fromJSON(json);
         this.points = [];
-        for(let i196 = 0, l = json.points.length; i196 < l; i196++){
-            const point = json.points[i196];
+        for(let i197 = 0, l = json.points.length; i197 < l; i197++){
+            const point = json.points[i197];
             this.points.push(new Vector2().fromArray(point));
         }
         return this;
@@ -19612,17 +19701,17 @@ var Curves = /*#__PURE__*/ Object.freeze({
     getPoint(t, optionalTarget) {
         const d = t * this.getLength();
         const curveLengths = this.getCurveLengths();
-        let i197 = 0;
+        let i198 = 0;
         // To think about boundaries points.
-        while(i197 < curveLengths.length){
-            if (curveLengths[i197] >= d) {
-                const diff = curveLengths[i197] - d;
-                const curve = this.curves[i197];
+        while(i198 < curveLengths.length){
+            if (curveLengths[i198] >= d) {
+                const diff = curveLengths[i198] - d;
+                const curve = this.curves[i198];
                 const segmentLength = curve.getLength();
                 const u = segmentLength === 0 ? 0 : 1 - diff / segmentLength;
                 return curve.getPointAt(u, optionalTarget);
             }
-            i197++;
+            i198++;
         }
         return null;
     // loop where sum != 0, sum > d , sum+1 <d
@@ -19649,8 +19738,8 @@ var Curves = /*#__PURE__*/ Object.freeze({
         // Push sums into cached array
         const lengths = [];
         let sums = 0;
-        for(let i198 = 0, l = this.curves.length; i198 < l; i198++){
-            sums += this.curves[i198].getLength();
+        for(let i199 = 0, l = this.curves.length; i199 < l; i199++){
+            sums += this.curves[i199].getLength();
             lengths.push(sums);
         }
         this.cacheLengths = lengths;
@@ -19658,15 +19747,15 @@ var Curves = /*#__PURE__*/ Object.freeze({
     }
     getSpacedPoints(divisions = 40) {
         const points = [];
-        for(let i199 = 0; i199 <= divisions; i199++)points.push(this.getPoint(i199 / divisions));
+        for(let i200 = 0; i200 <= divisions; i200++)points.push(this.getPoint(i200 / divisions));
         if (this.autoClose) points.push(points[0]);
         return points;
     }
     getPoints(divisions = 12) {
         const points = [];
         let last;
-        for(let i200 = 0, curves = this.curves; i200 < curves.length; i200++){
-            const curve = curves[i200];
+        for(let i201 = 0, curves = this.curves; i201 < curves.length; i201++){
+            const curve = curves[i201];
             const resolution = curve.isEllipseCurve ? divisions * 2 : curve.isLineCurve || curve.isLineCurve3 ? 1 : curve.isSplineCurve ? divisions * curve.points.length : divisions;
             const pts = curve.getPoints(resolution);
             for(let j = 0; j < pts.length; j++){
@@ -19682,8 +19771,8 @@ var Curves = /*#__PURE__*/ Object.freeze({
     copy(source) {
         super.copy(source);
         this.curves = [];
-        for(let i201 = 0, l = source.curves.length; i201 < l; i201++){
-            const curve = source.curves[i201];
+        for(let i202 = 0, l = source.curves.length; i202 < l; i202++){
+            const curve = source.curves[i202];
             this.curves.push(curve.clone());
         }
         this.autoClose = source.autoClose;
@@ -19693,8 +19782,8 @@ var Curves = /*#__PURE__*/ Object.freeze({
         const data = super.toJSON();
         data.autoClose = this.autoClose;
         data.curves = [];
-        for(let i202 = 0, l = this.curves.length; i202 < l; i202++){
-            const curve = this.curves[i202];
+        for(let i203 = 0, l = this.curves.length; i203 < l; i203++){
+            const curve = this.curves[i203];
             data.curves.push(curve.toJSON());
         }
         return data;
@@ -19703,8 +19792,8 @@ var Curves = /*#__PURE__*/ Object.freeze({
         super.fromJSON(json);
         this.autoClose = json.autoClose;
         this.curves = [];
-        for(let i203 = 0, l = json.curves.length; i203 < l; i203++){
-            const curve = json.curves[i203];
+        for(let i204 = 0, l = json.curves.length; i204 < l; i204++){
+            const curve = json.curves[i204];
             this.curves.push(new Curves[curve.type]().fromJSON(curve));
         }
         return this;
@@ -19719,7 +19808,7 @@ class Path extends CurvePath {
     }
     setFromPoints(points) {
         this.moveTo(points[0].x, points[0].y);
-        for(let i204 = 1, l = points.length; i204 < l; i204++)this.lineTo(points[i204].x, points[i204].y);
+        for(let i205 = 1, l = points.length; i205 < l; i205++)this.lineTo(points[i205].x, points[i205].y);
         return this;
     }
     moveTo(x, y) {
@@ -19859,8 +19948,8 @@ class LatheGeometry extends BufferGeometry {
                 prevNormal.copy(curNormal);
         }
         // generate vertices, uvs and normals
-        for(let i206 = 0; i206 <= segments; i206++){
-            const phi = phiStart + i206 * inverseSegments * phiLength;
+        for(let i207 = 0; i207 <= segments; i207++){
+            const phi = phiStart + i207 * inverseSegments * phiLength;
             const sin = Math.sin(phi);
             const cos = Math.cos(phi);
             for(let j = 0; j <= points.length - 1; j++){
@@ -19870,7 +19959,7 @@ class LatheGeometry extends BufferGeometry {
                 vertex1.z = points[j].x * cos;
                 vertices.push(vertex1.x, vertex1.y, vertex1.z);
                 // uv
-                uv.x = i206 / segments;
+                uv.x = i207 / segments;
                 uv.y = j / (points.length - 1);
                 uvs.push(uv.x, uv.y);
                 // normal
@@ -19881,8 +19970,8 @@ class LatheGeometry extends BufferGeometry {
             }
         }
         // indices
-        for(let i205 = 0; i205 < segments; i205++)for(let j1 = 0; j1 < points.length - 1; j1++){
-            const base = j1 + i205 * points.length;
+        for(let i206 = 0; i206 < segments; i206++)for(let j1 = 0; j1 < points.length - 1; j1++){
+            const base = j1 + i206 * points.length;
             const a = base;
             const b = base + points.length;
             const c = base + points.length + 1;
@@ -19942,7 +20031,7 @@ class CircleGeometry extends BufferGeometry {
         vertices.push(0, 0, 0);
         normals.push(0, 0, 1);
         uvs.push(0.5, 0.5);
-        for(let s = 0, i208 = 3; s <= segments; s++, i208 += 3){
+        for(let s = 0, i209 = 3; s <= segments; s++, i209 += 3){
             const segment = thetaStart + s / segments * thetaLength;
             // vertex
             vertex2.x = radius * Math.cos(segment);
@@ -19951,12 +20040,12 @@ class CircleGeometry extends BufferGeometry {
             // normal
             normals.push(0, 0, 1);
             // uvs
-            uv.x = (vertices[i208] / radius + 1) / 2;
-            uv.y = (vertices[i208 + 1] / radius + 1) / 2;
+            uv.x = (vertices[i209] / radius + 1) / 2;
+            uv.y = (vertices[i209 + 1] / radius + 1) / 2;
             uvs.push(uv.x, uv.y);
         }
         // indices
-        for(let i207 = 1; i207 <= segments; i207++)indices.push(i207, i207 + 1, 0);
+        for(let i208 = 1; i208 <= segments; i208++)indices.push(i208, i208 + 1, 0);
         // build geometry
         this.setIndex(indices);
         this.setAttribute('position', new Float32BufferAttribute(vertices, 3));
@@ -20102,11 +20191,11 @@ class CylinderGeometry extends BufferGeometry {
             // generate indices
             for(let x5 = 0; x5 < radialSegments; x5++){
                 const c = centerIndexStart + x5;
-                const i209 = centerIndexEnd + x5;
+                const i210 = centerIndexEnd + x5;
                 if (top === true) // face top
-                indices.push(i209, i209 + 1, c);
+                indices.push(i210, i210 + 1, c);
                 else // face bottom
-                indices.push(i209 + 1, i209, c);
+                indices.push(i210 + 1, i210, c);
                 groupCount += 3;
             }
             // add a group to the geometry. this will ensure multi material support
@@ -20168,11 +20257,11 @@ class PolyhedronGeometry extends BufferGeometry {
             const b = new Vector3();
             const c = new Vector3();
             // iterate over all faces and apply a subdivison with the given detail value
-            for(let i210 = 0; i210 < indices.length; i210 += 3){
+            for(let i211 = 0; i211 < indices.length; i211 += 3){
                 // get the vertices of the face
-                getVertexByIndex(indices[i210 + 0], a);
-                getVertexByIndex(indices[i210 + 1], b);
-                getVertexByIndex(indices[i210 + 2], c);
+                getVertexByIndex(indices[i211 + 0], a);
+                getVertexByIndex(indices[i211 + 1], b);
+                getVertexByIndex(indices[i211 + 2], c);
                 // perform subdivision
                 subdivideFace(a, b, c, detail);
             }
@@ -20182,47 +20271,47 @@ class PolyhedronGeometry extends BufferGeometry {
             // we use this multidimensional array as a data structure for creating the subdivision
             const v = [];
             // construct all of the vertices for this subdivision
-            for(let i212 = 0; i212 <= cols; i212++){
-                v[i212] = [];
-                const aj = a.clone().lerp(c, i212 / cols);
-                const bj = b.clone().lerp(c, i212 / cols);
-                const rows = cols - i212;
-                for(let j = 0; j <= rows; j++)if (j === 0 && i212 === cols) v[i212][j] = aj;
-                else v[i212][j] = aj.clone().lerp(bj, j / rows);
+            for(let i213 = 0; i213 <= cols; i213++){
+                v[i213] = [];
+                const aj = a.clone().lerp(c, i213 / cols);
+                const bj = b.clone().lerp(c, i213 / cols);
+                const rows = cols - i213;
+                for(let j = 0; j <= rows; j++)if (j === 0 && i213 === cols) v[i213][j] = aj;
+                else v[i213][j] = aj.clone().lerp(bj, j / rows);
             }
             // construct all of the faces
-            for(let i211 = 0; i211 < cols; i211++)for(let j = 0; j < 2 * (cols - i211) - 1; j++){
+            for(let i212 = 0; i212 < cols; i212++)for(let j = 0; j < 2 * (cols - i212) - 1; j++){
                 const k = Math.floor(j / 2);
                 if (j % 2 === 0) {
-                    pushVertex(v[i211][k + 1]);
-                    pushVertex(v[i211 + 1][k]);
-                    pushVertex(v[i211][k]);
+                    pushVertex(v[i212][k + 1]);
+                    pushVertex(v[i212 + 1][k]);
+                    pushVertex(v[i212][k]);
                 } else {
-                    pushVertex(v[i211][k + 1]);
-                    pushVertex(v[i211 + 1][k + 1]);
-                    pushVertex(v[i211 + 1][k]);
+                    pushVertex(v[i212][k + 1]);
+                    pushVertex(v[i212 + 1][k + 1]);
+                    pushVertex(v[i212 + 1][k]);
                 }
             }
         }
         function applyRadius(radius) {
             const vertex5 = new Vector3();
             // iterate over the entire buffer and apply the radius to each vertex
-            for(let i213 = 0; i213 < vertexBuffer.length; i213 += 3){
-                vertex5.x = vertexBuffer[i213 + 0];
-                vertex5.y = vertexBuffer[i213 + 1];
-                vertex5.z = vertexBuffer[i213 + 2];
+            for(let i214 = 0; i214 < vertexBuffer.length; i214 += 3){
+                vertex5.x = vertexBuffer[i214 + 0];
+                vertex5.y = vertexBuffer[i214 + 1];
+                vertex5.z = vertexBuffer[i214 + 2];
                 vertex5.normalize().multiplyScalar(radius);
-                vertexBuffer[i213 + 0] = vertex5.x;
-                vertexBuffer[i213 + 1] = vertex5.y;
-                vertexBuffer[i213 + 2] = vertex5.z;
+                vertexBuffer[i214 + 0] = vertex5.x;
+                vertexBuffer[i214 + 1] = vertex5.y;
+                vertexBuffer[i214 + 2] = vertex5.z;
             }
         }
         function generateUVs() {
             const vertex6 = new Vector3();
-            for(let i214 = 0; i214 < vertexBuffer.length; i214 += 3){
-                vertex6.x = vertexBuffer[i214 + 0];
-                vertex6.y = vertexBuffer[i214 + 1];
-                vertex6.z = vertexBuffer[i214 + 2];
+            for(let i215 = 0; i215 < vertexBuffer.length; i215 += 3){
+                vertex6.x = vertexBuffer[i215 + 0];
+                vertex6.y = vertexBuffer[i215 + 1];
+                vertex6.z = vertexBuffer[i215 + 2];
                 const u = azimuth1(vertex6) / 2 / Math.PI + 0.5;
                 const v = inclination(vertex6) / Math.PI + 0.5;
                 uvBuffer.push(u, 1 - v);
@@ -20232,18 +20321,18 @@ class PolyhedronGeometry extends BufferGeometry {
         }
         function correctSeam() {
             // handle case when face straddles the seam, see #3269
-            for(let i215 = 0; i215 < uvBuffer.length; i215 += 6){
+            for(let i216 = 0; i216 < uvBuffer.length; i216 += 6){
                 // uv data of a single face
-                const x0 = uvBuffer[i215 + 0];
-                const x1 = uvBuffer[i215 + 2];
-                const x2 = uvBuffer[i215 + 4];
+                const x0 = uvBuffer[i216 + 0];
+                const x1 = uvBuffer[i216 + 2];
+                const x2 = uvBuffer[i216 + 4];
                 const max = Math.max(x0, x1, x2);
                 const min = Math.min(x0, x1, x2);
                 // 0.9 is somewhat arbitrary
                 if (max > 0.9 && min < 0.1) {
-                    if (x0 < 0.2) uvBuffer[i215 + 0] += 1;
-                    if (x1 < 0.2) uvBuffer[i215 + 2] += 1;
-                    if (x2 < 0.2) uvBuffer[i215 + 4] += 1;
+                    if (x0 < 0.2) uvBuffer[i216 + 0] += 1;
+                    if (x1 < 0.2) uvBuffer[i216 + 2] += 1;
+                    if (x2 < 0.2) uvBuffer[i216 + 4] += 1;
                 }
             }
         }
@@ -20264,10 +20353,10 @@ class PolyhedronGeometry extends BufferGeometry {
             const uvA = new Vector2();
             const uvB = new Vector2();
             const uvC = new Vector2();
-            for(let i216 = 0, j = 0; i216 < vertexBuffer.length; i216 += 9, j += 6){
-                a.set(vertexBuffer[i216 + 0], vertexBuffer[i216 + 1], vertexBuffer[i216 + 2]);
-                b.set(vertexBuffer[i216 + 3], vertexBuffer[i216 + 4], vertexBuffer[i216 + 5]);
-                c.set(vertexBuffer[i216 + 6], vertexBuffer[i216 + 7], vertexBuffer[i216 + 8]);
+            for(let i217 = 0, j = 0; i217 < vertexBuffer.length; i217 += 9, j += 6){
+                a.set(vertexBuffer[i217 + 0], vertexBuffer[i217 + 1], vertexBuffer[i217 + 2]);
+                b.set(vertexBuffer[i217 + 3], vertexBuffer[i217 + 4], vertexBuffer[i217 + 5]);
+                c.set(vertexBuffer[i217 + 6], vertexBuffer[i217 + 7], vertexBuffer[i217 + 8]);
                 uvA.set(uvBuffer[j + 0], uvBuffer[j + 1]);
                 uvB.set(uvBuffer[j + 2], uvBuffer[j + 3]);
                 uvC.set(uvBuffer[j + 4], uvBuffer[j + 5]);
@@ -20518,15 +20607,15 @@ class EdgesGeometry extends BufferGeometry {
             const hashes = new Array(3);
             const edgeData = {};
             const vertices = [];
-            for(let i217 = 0; i217 < indexCount; i217 += 3){
+            for(let i218 = 0; i218 < indexCount; i218 += 3){
                 if (indexAttr) {
-                    indexArr[0] = indexAttr.getX(i217);
-                    indexArr[1] = indexAttr.getX(i217 + 1);
-                    indexArr[2] = indexAttr.getX(i217 + 2);
+                    indexArr[0] = indexAttr.getX(i218);
+                    indexArr[1] = indexAttr.getX(i218 + 1);
+                    indexArr[2] = indexAttr.getX(i218 + 2);
                 } else {
-                    indexArr[0] = i217;
-                    indexArr[1] = i217 + 1;
-                    indexArr[2] = i217 + 2;
+                    indexArr[0] = i218;
+                    indexArr[1] = i218 + 1;
+                    indexArr[2] = i218 + 2;
                 }
                 const { a , b , c  } = _triangle;
                 a.fromBufferAttribute(positionAttr, indexArr[0]);
@@ -20586,7 +20675,7 @@ class Shape extends Path {
     }
     getPointsHoles(divisions) {
         const holesPts = [];
-        for(let i218 = 0, l = this.holes.length; i218 < l; i218++)holesPts[i218] = this.holes[i218].getPoints(divisions);
+        for(let i219 = 0, l = this.holes.length; i219 < l; i219++)holesPts[i219] = this.holes[i219].getPoints(divisions);
         return holesPts;
     }
     // get points of shape and holes (keypoints based on segments parameter)
@@ -20599,8 +20688,8 @@ class Shape extends Path {
     copy(source) {
         super.copy(source);
         this.holes = [];
-        for(let i219 = 0, l = source.holes.length; i219 < l; i219++){
-            const hole = source.holes[i219];
+        for(let i220 = 0, l = source.holes.length; i220 < l; i220++){
+            const hole = source.holes[i220];
             this.holes.push(hole.clone());
         }
         return this;
@@ -20609,8 +20698,8 @@ class Shape extends Path {
         const data = super.toJSON();
         data.uuid = this.uuid;
         data.holes = [];
-        for(let i220 = 0, l = this.holes.length; i220 < l; i220++){
-            const hole = this.holes[i220];
+        for(let i221 = 0, l = this.holes.length; i221 < l; i221++){
+            const hole = this.holes[i221];
             data.holes.push(hole.toJSON());
         }
         return data;
@@ -20619,8 +20708,8 @@ class Shape extends Path {
         super.fromJSON(json);
         this.uuid = json.uuid;
         this.holes = [];
-        for(let i221 = 0, l = json.holes.length; i221 < l; i221++){
-            const hole = json.holes[i221];
+        for(let i222 = 0, l = json.holes.length; i222 < l; i222++){
+            const hole = json.holes[i222];
             this.holes.push(new Path().fromJSON(hole));
         }
         return this;
@@ -20641,9 +20730,9 @@ class Shape extends Path {
         if (data.length > 80 * dim) {
             minX = maxX = data[0];
             minY = maxY = data[1];
-            for(let i222 = dim; i222 < outerLen; i222 += dim){
-                x = data[i222];
-                y = data[i222 + 1];
+            for(let i223 = dim; i223 < outerLen; i223 += dim){
+                x = data[i223];
+                y = data[i223 + 1];
                 if (x < minX) minX = x;
                 if (y < minY) minY = y;
                 if (x > maxX) maxX = x;
@@ -20659,9 +20748,9 @@ class Shape extends Path {
 };
 // create a circular doubly linked list from polygon points in the specified winding order
 function linkedList(data, start, end, dim, clockwise) {
-    let i223, last;
-    if (clockwise === signedArea(data, start, end, dim) > 0) for(i223 = start; i223 < end; i223 += dim)last = insertNode(i223, data[i223], data[i223 + 1], last);
-    else for(i223 = end - dim; i223 >= start; i223 -= dim)last = insertNode(i223, data[i223], data[i223 + 1], last);
+    let i224, last;
+    if (clockwise === signedArea(data, start, end, dim) > 0) for(i224 = start; i224 < end; i224 += dim)last = insertNode(i224, data[i224], data[i224 + 1], last);
+    else for(i224 = end - dim; i224 >= start; i224 -= dim)last = insertNode(i224, data[i224], data[i224 + 1], last);
     if (last && equals(last, last.next)) {
         removeNode(last);
         last = last.next;
@@ -20802,18 +20891,18 @@ function splitEarcut(start, triangles, dim, minX, minY, invSize) {
 // link every hole into the outer loop, producing a single-ring polygon without holes
 function eliminateHoles(data, holeIndices, outerNode, dim) {
     const queue = [];
-    let i224, len, start, end, list;
-    for(i224 = 0, len = holeIndices.length; i224 < len; i224++){
-        start = holeIndices[i224] * dim;
-        end = i224 < len - 1 ? holeIndices[i224 + 1] * dim : data.length;
+    let i225, len, start, end, list;
+    for(i225 = 0, len = holeIndices.length; i225 < len; i225++){
+        start = holeIndices[i225] * dim;
+        end = i225 < len - 1 ? holeIndices[i225 + 1] * dim : data.length;
         list = linkedList(data, start, end, dim, false);
         if (list === list.next) list.steiner = true;
         queue.push(getLeftmost(list));
     }
     queue.sort(compareX);
     // process holes from left to right
-    for(i224 = 0; i224 < queue.length; i224++){
-        eliminateHole(queue[i224], outerNode);
+    for(i225 = 0; i225 < queue.length; i225++){
+        eliminateHole(queue[i225], outerNode);
         outerNode = filterPoints(outerNode, outerNode.next);
     }
     return outerNode;
@@ -20893,7 +20982,7 @@ function indexCurve(start, minX, minY, invSize) {
 // Simon Tatham's linked list merge sort algorithm
 // http://www.chiark.greenend.org.uk/~sgtatham/algorithms/listsort.html
 function sortLinked(list) {
-    let i225, p, q, e, tail, numMerges, pSize, qSize, inSize = 1;
+    let i226, p, q, e, tail, numMerges, pSize, qSize, inSize = 1;
     do {
         p = list;
         list = null;
@@ -20903,7 +20992,7 @@ function sortLinked(list) {
             numMerges++;
             q = p;
             pSize = 0;
-            for(i225 = 0; i225 < inSize; i225++){
+            for(i226 = 0; i226 < inSize; i226++){
                 pSize++;
                 q = q.nextZ;
                 if (!q) break;
@@ -21029,8 +21118,8 @@ function splitPolygon(a, b) {
     return b2;
 }
 // create a node and optionally link it with previous one (in a circular doubly linked list)
-function insertNode(i226, x, y, last) {
-    const p = new Node(i226, x, y);
+function insertNode(i227, x, y, last) {
+    const p = new Node(i227, x, y);
     if (!last) {
         p.prev = p;
         p.next = p;
@@ -21048,9 +21137,9 @@ function removeNode(p) {
     if (p.prevZ) p.prevZ.nextZ = p.nextZ;
     if (p.nextZ) p.nextZ.prevZ = p.prevZ;
 }
-function Node(i227, x, y) {
+function Node(i228, x, y) {
     // vertex index in coordinates array
-    this.i = i227;
+    this.i = i228;
     // vertex coordinates
     this.x = x;
     this.y = y;
@@ -21067,9 +21156,9 @@ function Node(i227, x, y) {
 }
 function signedArea(data, start, end, dim) {
     let sum = 0;
-    for(let i228 = start, j = end - dim; i228 < end; i228 += dim){
-        sum += (data[j] - data[i228]) * (data[i228 + 1] + data[j + 1]);
-        j = i228;
+    for(let i229 = start, j = end - dim; i229 < end; i229 += dim){
+        sum += (data[j] - data[i229]) * (data[i229 + 1] + data[j + 1]);
+        j = i229;
     }
     return sum;
 }
@@ -21093,15 +21182,15 @@ class ShapeUtils {
         //
         let holeIndex = contour.length;
         holes.forEach(removeDupEndPts);
-        for(let i230 = 0; i230 < holes.length; i230++){
+        for(let i231 = 0; i231 < holes.length; i231++){
             holeIndices.push(holeIndex);
-            holeIndex += holes[i230].length;
-            addContour(vertices, holes[i230]);
+            holeIndex += holes[i231].length;
+            addContour(vertices, holes[i231]);
         }
         //
         const triangles = Earcut.triangulate(vertices, holeIndices);
         //
-        for(let i229 = 0; i229 < triangles.length; i229 += 3)faces.push(triangles.slice(i229, i229 + 3));
+        for(let i230 = 0; i230 < triangles.length; i230 += 3)faces.push(triangles.slice(i230, i230 + 3));
         return faces;
     }
 }
@@ -21110,9 +21199,9 @@ function removeDupEndPts(points) {
     if (l > 2 && points[l - 1].equals(points[0])) points.pop();
 }
 function addContour(vertices, contour) {
-    for(let i231 = 0; i231 < contour.length; i231++){
-        vertices.push(contour[i231].x);
-        vertices.push(contour[i231].y);
+    for(let i232 = 0; i232 < contour.length; i232++){
+        vertices.push(contour[i232].x);
+        vertices.push(contour[i232].y);
     }
 }
 /**
@@ -21154,8 +21243,8 @@ function addContour(vertices, contour) {
         const scope = this;
         const verticesArray = [];
         const uvArray = [];
-        for(let i232 = 0, l = shapes.length; i232 < l; i232++){
-            const shape = shapes[i232];
+        for(let i233 = 0, l = shapes.length; i233 < l; i233++){
+            const shape = shapes[i233];
             addShape(shape);
         }
         // build geometry
@@ -21288,23 +21377,23 @@ function addContour(vertices, contour) {
                 return new Vector2(v_trans_x / shrink_by, v_trans_y / shrink_by);
             }
             const contourMovements = [];
-            for(let i235 = 0, il = contour1.length, j2 = il - 1, k1 = i235 + 1; i235 < il; i235++, j2++, k1++){
+            for(let i236 = 0, il = contour1.length, j2 = il - 1, k1 = i236 + 1; i236 < il; i236++, j2++, k1++){
                 if (j2 === il) j2 = 0;
                 if (k1 === il) k1 = 0;
                 //  (j)---(i)---(k)
                 // console.log('i,j,k', i, j , k)
-                contourMovements[i235] = getBevelVec(contour1[i235], contour1[j2], contour1[k1]);
+                contourMovements[i236] = getBevelVec(contour1[i236], contour1[j2], contour1[k1]);
             }
             const holesMovements = [];
             let oneHoleMovements, verticesMovements = contourMovements.concat();
             for(let h1 = 0, hl1 = holes.length; h1 < hl1; h1++){
                 const ahole = holes[h1];
                 oneHoleMovements = [];
-                for(let i236 = 0, il = ahole.length, j = il - 1, k = i236 + 1; i236 < il; i236++, j++, k++){
+                for(let i237 = 0, il = ahole.length, j = il - 1, k = i237 + 1; i237 < il; i237++, j++, k++){
                     if (j === il) j = 0;
                     if (k === il) k = 0;
                     //  (j)---(i)---(k)
-                    oneHoleMovements[i236] = getBevelVec(ahole[i236], ahole[j], ahole[k]);
+                    oneHoleMovements[i237] = getBevelVec(ahole[i237], ahole[j], ahole[k]);
                 }
                 holesMovements.push(oneHoleMovements);
                 verticesMovements = verticesMovements.concat(oneHoleMovements);
@@ -21316,24 +21405,24 @@ function addContour(vertices, contour) {
                 const z = bevelThickness * Math.cos(t * Math.PI / 2);
                 const bs = bevelSize * Math.sin(t * Math.PI / 2) + bevelOffset;
                 // contract shape
-                for(let i237 = 0, il = contour1.length; i237 < il; i237++){
-                    const vert = scalePt2(contour1[i237], contourMovements[i237], bs);
+                for(let i238 = 0, il = contour1.length; i238 < il; i238++){
+                    const vert = scalePt2(contour1[i238], contourMovements[i238], bs);
                     v(vert.x, vert.y, -z);
                 }
                 // expand holes
                 for(let h = 0, hl = holes.length; h < hl; h++){
                     const ahole = holes[h];
                     oneHoleMovements = holesMovements[h];
-                    for(let i238 = 0, il = ahole.length; i238 < il; i238++){
-                        const vert = scalePt2(ahole[i238], oneHoleMovements[i238], bs);
+                    for(let i239 = 0, il = ahole.length; i239 < il; i239++){
+                        const vert = scalePt2(ahole[i239], oneHoleMovements[i239], bs);
                         v(vert.x, vert.y, -z);
                     }
                 }
             }
             const bs = bevelSize + bevelOffset;
             // Back facing vertices
-            for(let i233 = 0; i233 < vlen; i233++){
-                const vert = bevelEnabled ? scalePt2(vertices[i233], verticesMovements[i233], bs) : vertices[i233];
+            for(let i234 = 0; i234 < vlen; i234++){
+                const vert = bevelEnabled ? scalePt2(vertices[i234], verticesMovements[i234], bs) : vertices[i234];
                 if (!extrudeByPath) v(vert.x, vert.y, 0);
                 else {
                     // v( vert.x, vert.y + extrudePts[ 0 ].y, extrudePts[ 0 ].x );
@@ -21345,8 +21434,8 @@ function addContour(vertices, contour) {
             }
             // Add stepped vertices...
             // Including front facing vertices
-            for(let s4 = 1; s4 <= steps; s4++)for(let i234 = 0; i234 < vlen; i234++){
-                const vert = bevelEnabled ? scalePt2(vertices[i234], verticesMovements[i234], bs) : vertices[i234];
+            for(let s4 = 1; s4 <= steps; s4++)for(let i235 = 0; i235 < vlen; i235++){
+                const vert = bevelEnabled ? scalePt2(vertices[i235], verticesMovements[i235], bs) : vertices[i235];
                 if (!extrudeByPath) v(vert.x, vert.y, depth / steps * s4);
                 else {
                     // v( vert.x, vert.y + extrudePts[ s - 1 ].y, extrudePts[ s - 1 ].x );
@@ -21363,16 +21452,16 @@ function addContour(vertices, contour) {
                 const z = bevelThickness * Math.cos(t * Math.PI / 2);
                 const bs = bevelSize * Math.sin(t * Math.PI / 2) + bevelOffset;
                 // contract shape
-                for(let i239 = 0, il = contour1.length; i239 < il; i239++){
-                    const vert = scalePt2(contour1[i239], contourMovements[i239], bs);
+                for(let i240 = 0, il = contour1.length; i240 < il; i240++){
+                    const vert = scalePt2(contour1[i240], contourMovements[i240], bs);
                     v(vert.x, vert.y, depth + z);
                 }
                 // expand holes
                 for(let h = 0, hl = holes.length; h < hl; h++){
                     const ahole = holes[h];
                     oneHoleMovements = holesMovements[h];
-                    for(let i240 = 0, il = ahole.length; i240 < il; i240++){
-                        const vert = scalePt2(ahole[i240], oneHoleMovements[i240], bs);
+                    for(let i241 = 0, il = ahole.length; i241 < il; i241++){
+                        const vert = scalePt2(ahole[i241], oneHoleMovements[i241], bs);
                         if (!extrudeByPath) v(vert.x, vert.y, depth + z);
                         else v(vert.x, vert.y + extrudePts[steps - 1].y, extrudePts[steps - 1].x + z);
                     }
@@ -21389,26 +21478,26 @@ function addContour(vertices, contour) {
                     let layer = 0; // steps + 1
                     let offset = vlen * layer;
                     // Bottom faces
-                    for(let i242 = 0; i242 < flen; i242++){
-                        const face = faces[i242];
+                    for(let i243 = 0; i243 < flen; i243++){
+                        const face = faces[i243];
                         f3(face[2] + offset, face[1] + offset, face[0] + offset);
                     }
                     layer = steps + bevelSegments * 2;
                     offset = vlen * layer;
                     // Top faces
-                    for(let i241 = 0; i241 < flen; i241++){
-                        const face = faces[i241];
+                    for(let i242 = 0; i242 < flen; i242++){
+                        const face = faces[i242];
                         f3(face[0] + offset, face[1] + offset, face[2] + offset);
                     }
                 } else {
                     // Bottom faces
-                    for(let i244 = 0; i244 < flen; i244++){
-                        const face = faces[i244];
+                    for(let i245 = 0; i245 < flen; i245++){
+                        const face = faces[i245];
                         f3(face[2], face[1], face[0]);
                     }
                     // Top faces
-                    for(let i243 = 0; i243 < flen; i243++){
-                        const face = faces[i243];
+                    for(let i244 = 0; i244 < flen; i244++){
+                        const face = faces[i244];
                         f3(face[0] + vlen * steps, face[1] + vlen * steps, face[2] + vlen * steps);
                     }
                 }
@@ -21429,10 +21518,10 @@ function addContour(vertices, contour) {
                 scope.addGroup(start, verticesArray.length / 3 - start, 1);
             }
             function sidewalls(contour, layeroffset) {
-                let i245 = contour.length;
-                while(--i245 >= 0){
-                    const j = i245;
-                    let k = i245 - 1;
+                let i246 = contour.length;
+                while(--i246 >= 0){
+                    const j = i246;
+                    let k = i246 - 1;
                     if (k < 0) k = contour.length - 1;
                     //console.log('b', i,j, i-1, k,vertices.length);
                     for(let s = 0, sl = steps + bevelSegments * 2; s < sl; s++){
@@ -21545,8 +21634,8 @@ const WorldUVGenerator = {
 };
 function toJSON$1(shapes, options, data) {
     data.shapes = [];
-    if (Array.isArray(shapes)) for(let i246 = 0, l = shapes.length; i246 < l; i246++){
-        const shape = shapes[i246];
+    if (Array.isArray(shapes)) for(let i247 = 0, l = shapes.length; i247 < l; i247++){
+        const shape = shapes[i247];
         data.shapes.push(shape.uuid);
     }
     else data.shapes.push(shapes.uuid);
@@ -21752,9 +21841,9 @@ class RingGeometry extends BufferGeometry {
         const uv = new Vector2();
         // generate vertices, normals and uvs
         for(let j = 0; j <= phiSegments; j++){
-            for(let i247 = 0; i247 <= thetaSegments; i247++){
+            for(let i248 = 0; i248 <= thetaSegments; i248++){
                 // values are generate from the inside of the ring to the outside
-                const segment = thetaStart + i247 / thetaSegments * thetaLength;
+                const segment = thetaStart + i248 / thetaSegments * thetaLength;
                 // vertex
                 vertex9.x = radius * Math.cos(segment);
                 vertex9.y = radius * Math.sin(segment);
@@ -21772,8 +21861,8 @@ class RingGeometry extends BufferGeometry {
         // indices
         for(let j3 = 0; j3 < phiSegments; j3++){
             const thetaSegmentLevel = j3 * (thetaSegments + 1);
-            for(let i248 = 0; i248 < thetaSegments; i248++){
-                const segment = i248 + thetaSegmentLevel;
+            for(let i249 = 0; i249 < thetaSegments; i249++){
+                const segment = i249 + thetaSegmentLevel;
                 const a = segment;
                 const b = segment + thetaSegments + 1;
                 const c = segment + thetaSegments + 2;
@@ -21815,9 +21904,9 @@ class ShapeGeometry extends BufferGeometry {
         let groupCount = 0;
         // allow single and array values for "shapes" parameter
         if (Array.isArray(shapes) === false) addShape(shapes);
-        else for(let i249 = 0; i249 < shapes.length; i249++){
-            addShape(shapes[i249]);
-            this.addGroup(groupStart, groupCount, i249); // enables MultiMaterial support
+        else for(let i250 = 0; i250 < shapes.length; i250++){
+            addShape(shapes[i250]);
+            this.addGroup(groupStart, groupCount, i250); // enables MultiMaterial support
             groupStart += groupCount;
             groupCount = 0;
         }
@@ -21834,26 +21923,26 @@ class ShapeGeometry extends BufferGeometry {
             const shapeHoles = points.holes;
             // check direction of vertices
             if (ShapeUtils.isClockWise(shapeVertices) === false) shapeVertices = shapeVertices.reverse();
-            for(let i253 = 0, l = shapeHoles.length; i253 < l; i253++){
-                const shapeHole = shapeHoles[i253];
-                if (ShapeUtils.isClockWise(shapeHole) === true) shapeHoles[i253] = shapeHole.reverse();
+            for(let i254 = 0, l = shapeHoles.length; i254 < l; i254++){
+                const shapeHole = shapeHoles[i254];
+                if (ShapeUtils.isClockWise(shapeHole) === true) shapeHoles[i254] = shapeHole.reverse();
             }
             const faces = ShapeUtils.triangulateShape(shapeVertices, shapeHoles);
             // join vertices of inner and outer paths to a single array
-            for(let i250 = 0, l3 = shapeHoles.length; i250 < l3; i250++){
-                const shapeHole = shapeHoles[i250];
+            for(let i251 = 0, l3 = shapeHoles.length; i251 < l3; i251++){
+                const shapeHole = shapeHoles[i251];
                 shapeVertices = shapeVertices.concat(shapeHole);
             }
             // vertices, normals, uvs
-            for(let i251 = 0, l4 = shapeVertices.length; i251 < l4; i251++){
-                const vertex10 = shapeVertices[i251];
+            for(let i252 = 0, l4 = shapeVertices.length; i252 < l4; i252++){
+                const vertex10 = shapeVertices[i252];
                 vertices.push(vertex10.x, vertex10.y, 0);
                 normals.push(0, 0, 1);
                 uvs.push(vertex10.x, vertex10.y); // world uvs
             }
             // incides
-            for(let i252 = 0, l5 = faces.length; i252 < l5; i252++){
-                const face = faces[i252];
+            for(let i253 = 0, l5 = faces.length; i253 < l5; i253++){
+                const face = faces[i253];
                 const a = face[0] + indexOffset;
                 const b = face[1] + indexOffset;
                 const c = face[2] + indexOffset;
@@ -21878,8 +21967,8 @@ class ShapeGeometry extends BufferGeometry {
 }
 function toJSON(shapes, data) {
     data.shapes = [];
-    if (Array.isArray(shapes)) for(let i254 = 0, l = shapes.length; i254 < l; i254++){
-        const shape = shapes[i254];
+    if (Array.isArray(shapes)) for(let i255 = 0, l = shapes.length; i255 < l; i255++){
+        const shape = shapes[i255];
         data.shapes.push(shape.uuid);
     }
     else data.shapes.push(shapes.uuid);
@@ -22017,8 +22106,8 @@ class TorusGeometry extends BufferGeometry {
         const vertex12 = new Vector3();
         const normal = new Vector3();
         // generate vertices, normals and uvs
-        for(let j = 0; j <= radialSegments; j++)for(let i256 = 0; i256 <= tubularSegments; i256++){
-            const u = i256 / tubularSegments * arc;
+        for(let j = 0; j <= radialSegments; j++)for(let i257 = 0; i257 <= tubularSegments; i257++){
+            const u = i257 / tubularSegments * arc;
             const v = j / radialSegments * Math.PI * 2;
             // vertex
             vertex12.x = (radius + tube * Math.cos(v)) * Math.cos(u);
@@ -22031,16 +22120,16 @@ class TorusGeometry extends BufferGeometry {
             normal.subVectors(vertex12, center).normalize();
             normals.push(normal.x, normal.y, normal.z);
             // uv
-            uvs.push(i256 / tubularSegments);
+            uvs.push(i257 / tubularSegments);
             uvs.push(j / radialSegments);
         }
         // generate indices
-        for(let j4 = 1; j4 <= radialSegments; j4++)for(let i255 = 1; i255 <= tubularSegments; i255++){
+        for(let j4 = 1; j4 <= radialSegments; j4++)for(let i256 = 1; i256 <= tubularSegments; i256++){
             // indices
-            const a = (tubularSegments + 1) * j4 + i255 - 1;
-            const b = (tubularSegments + 1) * (j4 - 1) + i255 - 1;
-            const c = (tubularSegments + 1) * (j4 - 1) + i255;
-            const d = (tubularSegments + 1) * j4 + i255;
+            const a = (tubularSegments + 1) * j4 + i256 - 1;
+            const b = (tubularSegments + 1) * (j4 - 1) + i256 - 1;
+            const c = (tubularSegments + 1) * (j4 - 1) + i256;
+            const d = (tubularSegments + 1) * j4 + i256;
             // faces
             indices.push(a, b, d);
             indices.push(b, c, d);
@@ -22083,9 +22172,9 @@ class TorusKnotGeometry extends BufferGeometry {
         const T = new Vector3();
         const N = new Vector3();
         // generate vertices, normals and uvs
-        for(let i258 = 0; i258 <= tubularSegments; ++i258){
+        for(let i259 = 0; i259 <= tubularSegments; ++i259){
             // the radian "u" is used to calculate the position on the torus curve of the current tubular segment
-            const u = i258 / tubularSegments * p6 * Math.PI * 2;
+            const u = i259 / tubularSegments * p6 * Math.PI * 2;
             // now we calculate two points. P1 is our current position on the curve, P2 is a little farther ahead.
             // these points are used to create a special "coordinate space", which is necessary to calculate the correct vertex positions
             calculatePositionOnCurve(u, p6, q3, radius3, P1);
@@ -22114,17 +22203,17 @@ class TorusKnotGeometry extends BufferGeometry {
                 normal.subVectors(vertex13, P1).normalize();
                 normals.push(normal.x, normal.y, normal.z);
                 // uv
-                uvs.push(i258 / tubularSegments);
+                uvs.push(i259 / tubularSegments);
                 uvs.push(j / radialSegments);
             }
         }
         // generate indices
-        for(let j = 1; j <= tubularSegments; j++)for(let i257 = 1; i257 <= radialSegments; i257++){
+        for(let j = 1; j <= tubularSegments; j++)for(let i258 = 1; i258 <= radialSegments; i258++){
             // indices
-            const a = (radialSegments + 1) * (j - 1) + (i257 - 1);
-            const b = (radialSegments + 1) * j + (i257 - 1);
-            const c = (radialSegments + 1) * j + i257;
-            const d = (radialSegments + 1) * (j - 1) + i257;
+            const a = (radialSegments + 1) * (j - 1) + (i258 - 1);
+            const b = (radialSegments + 1) * j + (i258 - 1);
+            const c = (radialSegments + 1) * j + i258;
+            const d = (radialSegments + 1) * (j - 1) + i258;
             // faces
             indices.push(a, b, d);
             indices.push(b, c, d);
@@ -22184,7 +22273,7 @@ class TubeGeometry extends BufferGeometry {
         this.setAttribute('uv', new Float32BufferAttribute(uvs, 2));
         // functions
         function generateBufferData() {
-            for(let i259 = 0; i259 < tubularSegments; i259++)generateSegment(i259);
+            for(let i260 = 0; i260 < tubularSegments; i260++)generateSegment(i260);
             // if the geometry is not closed, generate the last row of vertices and normals
             // at the regular position on the given path
             //
@@ -22196,12 +22285,12 @@ class TubeGeometry extends BufferGeometry {
             // finally create faces
             generateIndices();
         }
-        function generateSegment(i260) {
+        function generateSegment(i261) {
             // we use getPointAt to sample evenly distributed points from the given path
-            P = path.getPointAt(i260 / tubularSegments, P);
+            P = path.getPointAt(i261 / tubularSegments, P);
             // retrieve corresponding normal and binormal
-            const N = frames.normals[i260];
-            const B = frames.binormals[i260];
+            const N = frames.normals[i261];
+            const B = frames.binormals[i261];
             // generate normals and vertices for the current segment
             for(let j = 0; j <= radialSegments; j++){
                 const v = j / radialSegments * Math.PI * 2;
@@ -22221,19 +22310,19 @@ class TubeGeometry extends BufferGeometry {
             }
         }
         function generateIndices() {
-            for(let j = 1; j <= tubularSegments; j++)for(let i261 = 1; i261 <= radialSegments; i261++){
-                const a = (radialSegments + 1) * (j - 1) + (i261 - 1);
-                const b = (radialSegments + 1) * j + (i261 - 1);
-                const c = (radialSegments + 1) * j + i261;
-                const d = (radialSegments + 1) * (j - 1) + i261;
+            for(let j = 1; j <= tubularSegments; j++)for(let i262 = 1; i262 <= radialSegments; i262++){
+                const a = (radialSegments + 1) * (j - 1) + (i262 - 1);
+                const b = (radialSegments + 1) * j + (i262 - 1);
+                const c = (radialSegments + 1) * j + i262;
+                const d = (radialSegments + 1) * (j - 1) + i262;
                 // faces
                 indices.push(a, b, d);
                 indices.push(b, c, d);
             }
         }
         function generateUVs() {
-            for(let i262 = 0; i262 <= tubularSegments; i262++)for(let j = 0; j <= radialSegments; j++){
-                uv.x = i262 / tubularSegments;
+            for(let i263 = 0; i263 <= tubularSegments; i263++)for(let j = 0; j <= radialSegments; j++){
+                uv.x = i263 / tubularSegments;
                 uv.y = j / radialSegments;
                 uvs.push(uv.x, uv.y);
             }
@@ -22281,9 +22370,9 @@ class WireframeGeometry extends BufferGeometry {
                     const group = groups[o];
                     const groupStart = group.start;
                     const groupCount = group.count;
-                    for(let i263 = groupStart, l = groupStart + groupCount; i263 < l; i263 += 3)for(let j = 0; j < 3; j++){
-                        const index1 = indices.getX(i263 + j);
-                        const index2 = indices.getX(i263 + (j + 1) % 3);
+                    for(let i264 = groupStart, l = groupStart + groupCount; i264 < l; i264 += 3)for(let j = 0; j < 3; j++){
+                        const index1 = indices.getX(i264 + j);
+                        const index2 = indices.getX(i264 + (j + 1) % 3);
                         start.fromBufferAttribute(position, index1);
                         end.fromBufferAttribute(position, index2);
                         if (isUniqueEdge(start, end, edges) === true) {
@@ -22295,11 +22384,11 @@ class WireframeGeometry extends BufferGeometry {
             } else {
                 // non-indexed BufferGeometry
                 const position = geometry.attributes.position;
-                for(let i264 = 0, l = position.count / 3; i264 < l; i264++)for(let j = 0; j < 3; j++){
+                for(let i265 = 0, l = position.count / 3; i265 < l; i265++)for(let j = 0; j < 3; j++){
                     // three edges per triangle, an edge is represented as (index1, index2)
                     // e.g. the first triangle has the following edges: (0,1),(1,2),(2,0)
-                    const index1 = 3 * i264 + j;
-                    const index2 = 3 * i264 + (j + 1) % 3;
+                    const index1 = 3 * i265 + j;
+                    const index2 = 3 * i265 + (j + 1) % 3;
                     start.fromBufferAttribute(position, index1);
                     end.fromBufferAttribute(position, index2);
                     if (isUniqueEdge(start, end, edges) === true) {
@@ -22372,11 +22461,13 @@ class ShadowMaterial extends Material {
         this.type = 'ShadowMaterial';
         this.color = new Color(0x000000);
         this.transparent = true;
+        this.fog = true;
         this.setValues(parameters);
     }
     copy(source) {
         super.copy(source);
         this.color.copy(source.color);
+        this.fog = source.fog;
         return this;
     }
 }
@@ -22424,6 +22515,7 @@ class MeshStandardMaterial extends Material {
         this.wireframeLinecap = 'round';
         this.wireframeLinejoin = 'round';
         this.flatShading = false;
+        this.fog = true;
         this.setValues(parameters);
     }
     copy(source) {
@@ -22460,6 +22552,7 @@ class MeshStandardMaterial extends Material {
         this.wireframeLinecap = source.wireframeLinecap;
         this.wireframeLinejoin = source.wireframeLinejoin;
         this.flatShading = source.flatShading;
+        this.fog = source.fog;
         return this;
     }
 }
@@ -22591,6 +22684,7 @@ class MeshPhongMaterial extends Material {
         this.wireframeLinecap = 'round';
         this.wireframeLinejoin = 'round';
         this.flatShading = false;
+        this.fog = true;
         this.setValues(parameters);
     }
     copy(source) {
@@ -22625,6 +22719,7 @@ class MeshPhongMaterial extends Material {
         this.wireframeLinecap = source.wireframeLinecap;
         this.wireframeLinejoin = source.wireframeLinejoin;
         this.flatShading = source.flatShading;
+        this.fog = source.fog;
         return this;
     }
 }
@@ -22659,6 +22754,7 @@ class MeshToonMaterial extends Material {
         this.wireframeLinewidth = 1;
         this.wireframeLinecap = 'round';
         this.wireframeLinejoin = 'round';
+        this.fog = true;
         this.setValues(parameters);
     }
     copy(source) {
@@ -22686,6 +22782,7 @@ class MeshToonMaterial extends Material {
         this.wireframeLinewidth = source.wireframeLinewidth;
         this.wireframeLinecap = source.wireframeLinecap;
         this.wireframeLinejoin = source.wireframeLinejoin;
+        this.fog = source.fog;
         return this;
     }
 }
@@ -22704,7 +22801,6 @@ class MeshNormalMaterial extends Material {
         this.displacementBias = 0;
         this.wireframe = false;
         this.wireframeLinewidth = 1;
-        this.fog = false;
         this.flatShading = false;
         this.setValues(parameters);
     }
@@ -22748,6 +22844,7 @@ class MeshLambertMaterial extends Material {
         this.wireframeLinewidth = 1;
         this.wireframeLinecap = 'round';
         this.wireframeLinejoin = 'round';
+        this.fog = true;
         this.setValues(parameters);
     }
     copy(source) {
@@ -22771,6 +22868,7 @@ class MeshLambertMaterial extends Material {
         this.wireframeLinewidth = source.wireframeLinewidth;
         this.wireframeLinecap = source.wireframeLinecap;
         this.wireframeLinejoin = source.wireframeLinejoin;
+        this.fog = source.fog;
         return this;
     }
 }
@@ -22795,6 +22893,7 @@ class MeshMatcapMaterial extends Material {
         this.displacementBias = 0;
         this.alphaMap = null;
         this.flatShading = false;
+        this.fog = true;
         this.setValues(parameters);
     }
     copy(source) {
@@ -22815,6 +22914,7 @@ class MeshMatcapMaterial extends Material {
         this.displacementBias = source.displacementBias;
         this.alphaMap = source.alphaMap;
         this.flatShading = source.flatShading;
+        this.fog = source.fog;
         return this;
     }
 }
@@ -22879,12 +22979,12 @@ const AnimationUtils = {
     },
     // returns an array by which times and values can be sorted
     getKeyframeOrder: function(times) {
-        function compareTime(i266, j) {
-            return times[i266] - times[j];
+        function compareTime(i267, j) {
+            return times[i267] - times[j];
         }
         const n = times.length;
         const result = new Array(n);
-        for(let i265 = 0; i265 !== n; ++i265)result[i265] = i265;
+        for(let i266 = 0; i266 !== n; ++i266)result[i266] = i266;
         result.sort(compareTime);
         return result;
     },
@@ -22892,16 +22992,16 @@ const AnimationUtils = {
     sortedArray: function(values, stride, order) {
         const nValues = values.length;
         const result = new values.constructor(nValues);
-        for(let i267 = 0, dstOffset = 0; dstOffset !== nValues; ++i267){
-            const srcOffset = order[i267] * stride;
+        for(let i268 = 0, dstOffset = 0; dstOffset !== nValues; ++i268){
+            const srcOffset = order[i268] * stride;
             for(let j = 0; j !== stride; ++j)result[dstOffset++] = values[srcOffset + j];
         }
         return result;
     },
     // function for parsing AOS keyframe formats
     flattenJSON: function(jsonKeys, times, values, valuePropertyName) {
-        let i268 = 1, key = jsonKeys[0];
-        while(key !== undefined && key[valuePropertyName] === undefined)key = jsonKeys[i268++];
+        let i269 = 1, key = jsonKeys[0];
+        while(key !== undefined && key[valuePropertyName] === undefined)key = jsonKeys[i269++];
         if (key === undefined) return; // no data
         let value = key[valuePropertyName];
         if (value === undefined) return; // no data
@@ -22911,7 +23011,7 @@ const AnimationUtils = {
                 times.push(key.time);
                 values.push.apply(values, value); // push all elements
             }
-            key = jsonKeys[i268++];
+            key = jsonKeys[i269++];
         }while (key !== undefined)
         else if (value.toArray !== undefined) // ...assume THREE.Math-ish
         do {
@@ -22920,7 +23020,7 @@ const AnimationUtils = {
                 times.push(key.time);
                 value.toArray(values, values.length);
             }
-            key = jsonKeys[i268++];
+            key = jsonKeys[i269++];
         }while (key !== undefined)
         else // otherwise push as-is
         do {
@@ -22929,15 +23029,15 @@ const AnimationUtils = {
                 times.push(key.time);
                 values.push(value);
             }
-            key = jsonKeys[i268++];
+            key = jsonKeys[i269++];
         }while (key !== undefined)
     },
     subclip: function(sourceClip, name, startFrame, endFrame, fps = 30) {
         const clip = sourceClip.clone();
         clip.name = name;
         const tracks = [];
-        for(let i271 = 0; i271 < clip.tracks.length; ++i271){
-            const track = clip.tracks[i271];
+        for(let i272 = 0; i272 < clip.tracks.length; ++i272){
+            const track = clip.tracks[i272];
             const valueSize = track.getValueSize();
             const times = [];
             const values = [];
@@ -22955,9 +23055,9 @@ const AnimationUtils = {
         clip.tracks = tracks;
         // find minimum .times value across all tracks in the trimmed clip
         let minStartTime = Infinity;
-        for(let i269 = 0; i269 < clip.tracks.length; ++i269)if (minStartTime > clip.tracks[i269].times[0]) minStartTime = clip.tracks[i269].times[0];
+        for(let i270 = 0; i270 < clip.tracks.length; ++i270)if (minStartTime > clip.tracks[i270].times[0]) minStartTime = clip.tracks[i270].times[0];
         // shift all tracks such that clip begins at t=0
-        for(let i270 = 0; i270 < clip.tracks.length; ++i270)clip.tracks[i270].shift(-1 * minStartTime);
+        for(let i271 = 0; i271 < clip.tracks.length; ++i271)clip.tracks[i271].shift(-1 * minStartTime);
         clip.resetDuration();
         return clip;
     },
@@ -22966,8 +23066,8 @@ const AnimationUtils = {
         const numTracks = referenceClip.tracks.length;
         const referenceTime = referenceFrame / fps;
         // Make each track's values relative to the values at the reference frame
-        for(let i272 = 0; i272 < numTracks; ++i272){
-            const referenceTrack = referenceClip.tracks[i272];
+        for(let i273 = 0; i273 < numTracks; ++i273){
+            const referenceTrack = referenceClip.tracks[i273];
             const referenceTrackType = referenceTrack.ValueTypeName;
             // Skip this track if it's non-numeric
             if (referenceTrackType === 'bool' || referenceTrackType === 'string') continue;
@@ -23141,7 +23241,7 @@ const AnimationUtils = {
     copySampleValue_(index) {
         // copies a sample value to the result buffer
         const result = this.resultBuffer, values = this.sampleValues, stride = this.valueSize, offset = index * stride;
-        for(let i273 = 0; i273 !== stride; ++i273)result[i273] = values[offset + i273];
+        for(let i274 = 0; i274 !== stride; ++i274)result[i274] = values[offset + i274];
         return result;
     }
     // Template methods for derived classes:
@@ -23223,7 +23323,7 @@ Interpolant.prototype.afterEnd_ = Interpolant.prototype.copySampleValue_;
         const s1 = (-1 - wN) * ppp + (1.5 + wN) * pp + 0.5 * p;
         const sN = wN * ppp - wN * pp;
         // combine data linearly
-        for(let i274 = 0; i274 !== stride; ++i274)result[i274] = sP * values[oP + i274] + s0 * values[o0 + i274] + s1 * values[o1 + i274] + sN * values[oN + i274];
+        for(let i275 = 0; i275 !== stride; ++i275)result[i275] = sP * values[oP + i275] + s0 * values[o0 + i275] + s1 * values[o1 + i275] + sN * values[oN + i275];
         return result;
     }
 }
@@ -23233,7 +23333,7 @@ class LinearInterpolant extends Interpolant {
     }
     interpolate_(i1, t0, t, t1) {
         const result = this.resultBuffer, values = this.sampleValues, stride = this.valueSize, offset1 = i1 * stride, offset0 = offset1 - stride, weight1 = (t - t0) / (t1 - t0), weight0 = 1 - weight1;
-        for(let i275 = 0; i275 !== stride; ++i275)result[i275] = values[offset0 + i275] * weight0 + values[offset1 + i275] * weight1;
+        for(let i276 = 0; i276 !== stride; ++i276)result[i276] = values[offset0 + i276] * weight0 + values[offset1 + i276] * weight1;
         return result;
     }
 }
@@ -23330,7 +23430,7 @@ class KeyframeTrack {
     shift(timeOffset) {
         if (timeOffset !== 0.0) {
             const times = this.times;
-            for(let i276 = 0, n = times.length; i276 !== n; ++i276)times[i276] += timeOffset;
+            for(let i277 = 0, n = times.length; i277 !== n; ++i277)times[i277] += timeOffset;
         }
         return this;
     }
@@ -23338,7 +23438,7 @@ class KeyframeTrack {
     scale(timeScale) {
         if (timeScale !== 1.0) {
             const times = this.times;
-            for(let i277 = 0, n = times.length; i277 !== n; ++i277)times[i277] *= timeScale;
+            for(let i278 = 0, n = times.length; i278 !== n; ++i278)times[i278] *= timeScale;
         }
         return this;
     }
@@ -23376,25 +23476,25 @@ class KeyframeTrack {
             valid = false;
         }
         let prevTime = null;
-        for(let i278 = 0; i278 !== nKeys; i278++){
-            const currTime = times[i278];
+        for(let i279 = 0; i279 !== nKeys; i279++){
+            const currTime = times[i279];
             if (typeof currTime === 'number' && isNaN(currTime)) {
-                console.error('THREE.KeyframeTrack: Time is not a valid number.', this, i278, currTime);
+                console.error('THREE.KeyframeTrack: Time is not a valid number.', this, i279, currTime);
                 valid = false;
                 break;
             }
             if (prevTime !== null && prevTime > currTime) {
-                console.error('THREE.KeyframeTrack: Out of order keys.', this, i278, currTime, prevTime);
+                console.error('THREE.KeyframeTrack: Out of order keys.', this, i279, currTime, prevTime);
                 valid = false;
                 break;
             }
             prevTime = currTime;
         }
         if (values !== undefined) {
-            if (AnimationUtils.isTypedArray(values)) for(let i279 = 0, n = values.length; i279 !== n; ++i279){
-                const value = values[i279];
+            if (AnimationUtils.isTypedArray(values)) for(let i280 = 0, n = values.length; i280 !== n; ++i280){
+                const value = values[i280];
                 if (isNaN(value)) {
-                    console.error('THREE.KeyframeTrack: Value is not a valid number.', this, i279, value);
+                    console.error('THREE.KeyframeTrack: Value is not a valid number.', this, i280, value);
                     valid = false;
                     break;
                 }
@@ -23408,15 +23508,15 @@ class KeyframeTrack {
         // times or values may be shared with other tracks, so overwriting is unsafe
         const times = AnimationUtils.arraySlice(this.times), values = AnimationUtils.arraySlice(this.values), stride = this.getValueSize(), smoothInterpolation = this.getInterpolation() === InterpolateSmooth, lastIndex = times.length - 1;
         let writeIndex = 1;
-        for(let i280 = 1; i280 < lastIndex; ++i280){
+        for(let i281 = 1; i281 < lastIndex; ++i281){
             let keep = false;
-            const time = times[i280];
-            const timeNext = times[i280 + 1];
+            const time = times[i281];
+            const timeNext = times[i281 + 1];
             // remove adjacent keyframes scheduled at the same time
-            if (time !== timeNext && (i280 !== 1 || time !== times[0])) {
+            if (time !== timeNext && (i281 !== 1 || time !== times[0])) {
                 if (!smoothInterpolation) {
                     // remove unnecessary keyframes same as their neighbors
-                    const offset = i280 * stride, offsetP = offset - stride, offsetN = offset + stride;
+                    const offset = i281 * stride, offsetP = offset - stride, offsetN = offset + stride;
                     for(let j = 0; j !== stride; ++j){
                         const value = values[offset + j];
                         if (value !== values[offsetP + j] || value !== values[offsetN + j]) {
@@ -23428,9 +23528,9 @@ class KeyframeTrack {
             }
             // in-place compaction
             if (keep) {
-                if (i280 !== writeIndex) {
-                    times[writeIndex] = times[i280];
-                    const readOffset = i280 * stride, writeOffset = writeIndex * stride;
+                if (i281 !== writeIndex) {
+                    times[writeIndex] = times[i281];
+                    const readOffset = i281 * stride, writeOffset = writeIndex * stride;
                     for(let j = 0; j !== stride; ++j)values[writeOffset + j] = values[readOffset + j];
                 }
                 ++writeIndex;
@@ -23533,7 +23633,7 @@ class AnimationClip {
     }
     static parse(json) {
         const tracks = [], jsonTracks = json.tracks, frameTime = 1.0 / (json.fps || 1.0);
-        for(let i281 = 0, n = jsonTracks.length; i281 !== n; ++i281)tracks.push(parseKeyframeTrack(jsonTracks[i281]).scale(frameTime));
+        for(let i282 = 0, n = jsonTracks.length; i282 !== n; ++i282)tracks.push(parseKeyframeTrack(jsonTracks[i282]).scale(frameTime));
         const clip = new this(json.name, json.duration, tracks, json.blendMode);
         clip.uuid = json.uuid;
         return clip;
@@ -23547,16 +23647,16 @@ class AnimationClip {
             'uuid': clip.uuid,
             'blendMode': clip.blendMode
         };
-        for(let i282 = 0, n = clipTracks.length; i282 !== n; ++i282)tracks.push(KeyframeTrack.toJSON(clipTracks[i282]));
+        for(let i283 = 0, n = clipTracks.length; i283 !== n; ++i283)tracks.push(KeyframeTrack.toJSON(clipTracks[i283]));
         return json;
     }
     static CreateFromMorphTargetSequence(name, morphTargetSequence, fps, noLoop) {
         const numMorphTargets = morphTargetSequence.length;
         const tracks = [];
-        for(let i283 = 0; i283 < numMorphTargets; i283++){
+        for(let i284 = 0; i284 < numMorphTargets; i284++){
             let times = [];
             let values = [];
-            times.push((i283 + numMorphTargets - 1) % numMorphTargets, i283, (i283 + 1) % numMorphTargets);
+            times.push((i284 + numMorphTargets - 1) % numMorphTargets, i284, (i284 + 1) % numMorphTargets);
             values.push(0, 1, 0);
             const order = AnimationUtils.getKeyframeOrder(times);
             times = AnimationUtils.sortedArray(times, 1, order);
@@ -23567,7 +23667,7 @@ class AnimationClip {
                 times.push(numMorphTargets);
                 values.push(values[0]);
             }
-            tracks.push(new NumberKeyframeTrack('.morphTargetInfluences[' + morphTargetSequence[i283].name + ']', times, values).scale(1.0 / fps));
+            tracks.push(new NumberKeyframeTrack('.morphTargetInfluences[' + morphTargetSequence[i284].name + ']', times, values).scale(1.0 / fps));
         }
         return new this(name, -1, tracks);
     }
@@ -23577,8 +23677,8 @@ class AnimationClip {
             const o = objectOrClipArray;
             clipArray = o.geometry && o.geometry.animations || o.animations;
         }
-        for(let i284 = 0; i284 < clipArray.length; i284++){
-            if (clipArray[i284].name === name) return clipArray[i284];
+        for(let i285 = 0; i285 < clipArray.length; i285++){
+            if (clipArray[i285].name === name) return clipArray[i285];
         }
         return null;
     }
@@ -23589,8 +23689,8 @@ class AnimationClip {
         const pattern = /^([\w-]*?)([\d]+)$/;
         // sort morph target names into animation groups based
         // patterns like Walk_001, Walk_002, Run_001, Run_002
-        for(let i285 = 0, il = morphTargets.length; i285 < il; i285++){
-            const morphTarget = morphTargets[i285];
+        for(let i286 = 0, il = morphTargets.length; i286 < il; i286++){
+            const morphTarget = morphTargets[i286];
             const parts = morphTarget.name.match(pattern);
             if (parts && parts.length > 1) {
                 const name = parts[1];
@@ -23667,29 +23767,29 @@ class AnimationClip {
     resetDuration() {
         const tracks = this.tracks;
         let duration = 0;
-        for(let i286 = 0, n = tracks.length; i286 !== n; ++i286){
-            const track = this.tracks[i286];
+        for(let i287 = 0, n = tracks.length; i287 !== n; ++i287){
+            const track = this.tracks[i287];
             duration = Math.max(duration, track.times[track.times.length - 1]);
         }
         this.duration = duration;
         return this;
     }
     trim() {
-        for(let i287 = 0; i287 < this.tracks.length; i287++)this.tracks[i287].trim(0, this.duration);
+        for(let i288 = 0; i288 < this.tracks.length; i288++)this.tracks[i288].trim(0, this.duration);
         return this;
     }
     validate() {
         let valid = true;
-        for(let i288 = 0; i288 < this.tracks.length; i288++)valid = valid && this.tracks[i288].validate();
+        for(let i289 = 0; i289 < this.tracks.length; i289++)valid = valid && this.tracks[i289].validate();
         return valid;
     }
     optimize() {
-        for(let i289 = 0; i289 < this.tracks.length; i289++)this.tracks[i289].optimize();
+        for(let i290 = 0; i290 < this.tracks.length; i290++)this.tracks[i290].optimize();
         return this;
     }
     clone() {
         const tracks = [];
-        for(let i290 = 0; i290 < this.tracks.length; i290++)tracks.push(this.tracks[i290].clone());
+        for(let i291 = 0; i291 < this.tracks.length; i291++)tracks.push(this.tracks[i291].clone());
         return new this.constructor(this.name, this.duration, tracks, this.blendMode);
     }
     toJSON() {
@@ -23805,9 +23905,9 @@ class LoadingManager {
             return this;
         };
         this.getHandler = function(file) {
-            for(let i291 = 0, l = handlers.length; i291 < l; i291 += 2){
-                const regex = handlers[i291];
-                const loader = handlers[i291 + 1];
+            for(let i292 = 0, l = handlers.length; i292 < l; i292 += 2){
+                const regex = handlers[i292];
+                const loader = handlers[i292 + 1];
                 if (regex.global) regex.lastIndex = 0; // see #17920
                 if (regex.test(file)) return loader;
             }
@@ -23924,8 +24024,8 @@ class FileLoader extends Loader {
                                         loaded,
                                         total
                                     });
-                                    for(let i292 = 0, il = callbacks.length; i292 < il; i292++){
-                                        const callback = callbacks[i292];
+                                    for(let i293 = 0, il = callbacks.length; i293 < il; i293++){
+                                        const callback = callbacks[i293];
                                         if (callback.onProgress) callback.onProgress(event);
                                     }
                                     controller.enqueue(value);
@@ -23968,8 +24068,8 @@ class FileLoader extends Loader {
             Cache.add(url, data);
             const callbacks = loading[url];
             delete loading[url];
-            for(let i293 = 0, il = callbacks.length; i293 < il; i293++){
-                const callback = callbacks[i293];
+            for(let i294 = 0, il = callbacks.length; i294 < il; i294++){
+                const callback = callbacks[i294];
                 if (callback.onLoad) callback.onLoad(data);
             }
         }).catch((err)=>{
@@ -23981,8 +24081,8 @@ class FileLoader extends Loader {
                 throw err;
             }
             delete loading[url];
-            for(let i294 = 0, il = callbacks.length; i294 < il; i294++){
-                const callback = callbacks[i294];
+            for(let i295 = 0, il = callbacks.length; i295 < il; i295++){
+                const callback = callbacks[i295];
                 if (callback.onError) callback.onError(err);
             }
             this.manager.itemError(url);
@@ -24022,8 +24122,8 @@ class AnimationLoader extends Loader {
     }
     parse(json) {
         const animations = [];
-        for(let i295 = 0; i295 < json.length; i295++){
-            const clip = AnimationClip.parse(json[i295]);
+        for(let i296 = 0; i296 < json.length; i296++){
+            const clip = AnimationClip.parse(json[i296]);
             animations.push(clip);
         }
         return animations;
@@ -24047,10 +24147,10 @@ class AnimationLoader extends Loader {
         loader.setRequestHeader(this.requestHeader);
         loader.setWithCredentials(scope.withCredentials);
         let loaded = 0;
-        function loadTexture(i297) {
-            loader.load(url[i297], function(buffer) {
+        function loadTexture(i298) {
+            loader.load(url[i298], function(buffer) {
                 const texDatas = scope.parse(buffer, true);
-                images[i297] = {
+                images[i298] = {
                     width: texDatas.width,
                     height: texDatas.height,
                     format: texDatas.format,
@@ -24066,7 +24166,7 @@ class AnimationLoader extends Loader {
                 }
             }, onProgress, onError);
         }
-        if (Array.isArray(url)) for(let i296 = 0, il = url.length; i296 < il; ++i296)loadTexture(i296);
+        if (Array.isArray(url)) for(let i297 = 0, il = url.length; i297 < il; ++i297)loadTexture(i297);
         else // compressed cubemap texture stored in a single DDS file
         loader.load(url, function(buffer) {
             const texDatas = scope.parse(buffer, true);
@@ -24076,8 +24176,8 @@ class AnimationLoader extends Loader {
                     images[f] = {
                         mipmaps: []
                     };
-                    for(let i298 = 0; i298 < texDatas.mipmapCount; i298++){
-                        images[f].mipmaps.push(texDatas.mipmaps[f * texDatas.mipmapCount + i298]);
+                    for(let i299 = 0; i299 < texDatas.mipmapCount; i299++){
+                        images[f].mipmaps.push(texDatas.mipmaps[f * texDatas.mipmapCount + i299]);
                         images[f].format = texDatas.format;
                         images[f].width = texDatas.width;
                         images[f].height = texDatas.height;
@@ -24151,9 +24251,9 @@ class CubeTextureLoader extends Loader {
         loader.setCrossOrigin(this.crossOrigin);
         loader.setPath(this.path);
         let loaded = 0;
-        function loadTexture(i300) {
-            loader.load(urls[i300], function(image) {
-                texture.images[i300] = image;
+        function loadTexture(i301) {
+            loader.load(urls[i301], function(image) {
+                texture.images[i301] = image;
                 loaded++;
                 if (loaded === 6) {
                     texture.needsUpdate = true;
@@ -24161,7 +24261,7 @@ class CubeTextureLoader extends Loader {
                 }
             }, undefined, onError);
         }
-        for(let i299 = 0; i299 < urls.length; ++i299)loadTexture(i299);
+        for(let i300 = 0; i300 < urls.length; ++i300)loadTexture(i300);
         return texture;
     }
 }
@@ -24582,14 +24682,14 @@ RectAreaLight.prototype.isRectAreaLight = true;
 class SphericalHarmonics3 {
     constructor(){
         this.coefficients = [];
-        for(let i301 = 0; i301 < 9; i301++)this.coefficients.push(new Vector3());
+        for(let i302 = 0; i302 < 9; i302++)this.coefficients.push(new Vector3());
     }
     set(coefficients) {
-        for(let i302 = 0; i302 < 9; i302++)this.coefficients[i302].copy(coefficients[i302]);
+        for(let i303 = 0; i303 < 9; i303++)this.coefficients[i303].copy(coefficients[i303]);
         return this;
     }
     zero() {
-        for(let i303 = 0; i303 < 9; i303++)this.coefficients[i303].set(0, 0, 0);
+        for(let i304 = 0; i304 < 9; i304++)this.coefficients[i304].set(0, 0, 0);
         return this;
     }
     // get the radiance in the direction of the normal
@@ -24634,24 +24734,24 @@ class SphericalHarmonics3 {
         return target;
     }
     add(sh) {
-        for(let i304 = 0; i304 < 9; i304++)this.coefficients[i304].add(sh.coefficients[i304]);
+        for(let i305 = 0; i305 < 9; i305++)this.coefficients[i305].add(sh.coefficients[i305]);
         return this;
     }
     addScaledSH(sh, s) {
-        for(let i305 = 0; i305 < 9; i305++)this.coefficients[i305].addScaledVector(sh.coefficients[i305], s);
+        for(let i306 = 0; i306 < 9; i306++)this.coefficients[i306].addScaledVector(sh.coefficients[i306], s);
         return this;
     }
     scale(s) {
-        for(let i306 = 0; i306 < 9; i306++)this.coefficients[i306].multiplyScalar(s);
+        for(let i307 = 0; i307 < 9; i307++)this.coefficients[i307].multiplyScalar(s);
         return this;
     }
     lerp(sh, alpha) {
-        for(let i307 = 0; i307 < 9; i307++)this.coefficients[i307].lerp(sh.coefficients[i307], alpha);
+        for(let i308 = 0; i308 < 9; i308++)this.coefficients[i308].lerp(sh.coefficients[i308], alpha);
         return this;
     }
     equals(sh) {
-        for(let i308 = 0; i308 < 9; i308++){
-            if (!this.coefficients[i308].equals(sh.coefficients[i308])) return false;
+        for(let i309 = 0; i309 < 9; i309++){
+            if (!this.coefficients[i309].equals(sh.coefficients[i309])) return false;
         }
         return true;
     }
@@ -24663,12 +24763,12 @@ class SphericalHarmonics3 {
     }
     fromArray(array, offset = 0) {
         const coefficients = this.coefficients;
-        for(let i309 = 0; i309 < 9; i309++)coefficients[i309].fromArray(array, offset + i309 * 3);
+        for(let i310 = 0; i310 < 9; i310++)coefficients[i310].fromArray(array, offset + i310 * 3);
         return this;
     }
     toArray(array = [], offset = 0) {
         const coefficients = this.coefficients;
-        for(let i310 = 0; i310 < 9; i310++)coefficients[i310].toArray(array, offset + i310 * 3);
+        for(let i311 = 0; i311 < 9; i311++)coefficients[i311].toArray(array, offset + i311 * 3);
         return array;
     }
     // evaluate the basis functions
@@ -24898,8 +24998,8 @@ class LoaderUtils {
         // Avoid the String.fromCharCode.apply(null, array) shortcut, which
         // throws a "maximum call stack size exceeded" error for large arrays.
         let s = '';
-        for(let i311 = 0, il = array.length; i311 < il; i311++)// Implicitly assumes little-endian.
-        s += String.fromCharCode(array[i311]);
+        for(let i312 = 0, il = array.length; i312 < il; i312++)// Implicitly assumes little-endian.
+        s += String.fromCharCode(array[i312]);
         try {
             // merges multi-byte utf-8 characters.
             return decodeURIComponent(escape(s));
@@ -25021,8 +25121,8 @@ class BufferGeometryLoader extends Loader {
         if (morphAttributes) for(const key2 in morphAttributes){
             const attributeArray = morphAttributes[key2];
             const array = [];
-            for(let i312 = 0, il = attributeArray.length; i312 < il; i312++){
-                const attribute = attributeArray[i312];
+            for(let i313 = 0, il = attributeArray.length; i313 < il; i313++){
+                const attribute = attributeArray[i313];
                 let bufferAttribute;
                 if (attribute.isInterleavedBufferAttribute) {
                     const interleavedBuffer = getInterleavedBuffer(json1.data, attribute.data);
@@ -25039,8 +25139,8 @@ class BufferGeometryLoader extends Loader {
         const morphTargetsRelative = json1.data.morphTargetsRelative;
         if (morphTargetsRelative) geometry.morphTargetsRelative = true;
         const groups = json1.data.groups || json1.data.drawcalls || json1.data.offsets;
-        if (groups !== undefined) for(let i313 = 0, n = groups.length; i313 !== n; ++i313){
-            const group = groups[i313];
+        if (groups !== undefined) for(let i314 = 0, n = groups.length; i314 !== n; ++i314){
+            const group = groups[i314];
             geometry.addGroup(group.start, group.count, group.materialIndex);
         }
         const boundingSphere = json1.data.boundingSphere;
@@ -25134,8 +25234,8 @@ class ObjectLoader extends Loader {
     }
     parseShapes(json) {
         const shapes = {};
-        if (json !== undefined) for(let i314 = 0, l = json.length; i314 < l; i314++){
-            const shape = new Shape().fromJSON(json[i314]);
+        if (json !== undefined) for(let i315 = 0, l = json.length; i315 < l; i315++){
+            const shape = new Shape().fromJSON(json[i315]);
             shapes[shape.uuid] = shape;
         }
         return shapes;
@@ -25148,8 +25248,8 @@ class ObjectLoader extends Loader {
             if (child.isBone) bones[child.uuid] = child;
         });
         // create skeletons
-        if (json !== undefined) for(let i315 = 0, l = json.length; i315 < l; i315++){
-            const skeleton = new Skeleton().fromJSON(json[i315], bones);
+        if (json !== undefined) for(let i316 = 0, l = json.length; i316 < l; i316++){
+            const skeleton = new Skeleton().fromJSON(json[i316], bones);
             skeletons[skeleton.uuid] = skeleton;
         }
         return skeletons;
@@ -25158,9 +25258,9 @@ class ObjectLoader extends Loader {
         const geometries = {};
         if (json !== undefined) {
             const bufferGeometryLoader = new BufferGeometryLoader();
-            for(let i316 = 0, l = json.length; i316 < l; i316++){
+            for(let i317 = 0, l = json.length; i317 < l; i317++){
                 let geometry;
-                const data = json[i316];
+                const data = json[i317];
                 switch(data.type){
                     case 'BufferGeometry':
                     case 'InstancedBufferGeometry':
@@ -25187,8 +25287,8 @@ class ObjectLoader extends Loader {
         if (json !== undefined) {
             const loader = new MaterialLoader();
             loader.setTextures(textures);
-            for(let i317 = 0, l = json.length; i317 < l; i317++){
-                const data = json[i317];
+            for(let i318 = 0, l = json.length; i318 < l; i318++){
+                const data = json[i318];
                 if (data.type === 'MultiMaterial') {
                     // Deprecated
                     const array = [];
@@ -25208,8 +25308,8 @@ class ObjectLoader extends Loader {
     }
     parseAnimations(json) {
         const animations = {};
-        if (json !== undefined) for(let i318 = 0; i318 < json.length; i318++){
-            const data = json[i318];
+        if (json !== undefined) for(let i319 = 0; i319 < json.length; i319++){
+            const data = json[i319];
             const clip = AnimationClip.parse(data);
             animations[clip.uuid] = clip;
         }
@@ -25246,8 +25346,8 @@ class ObjectLoader extends Loader {
             const manager = new LoadingManager(onLoad);
             loader = new ImageLoader(manager);
             loader.setCrossOrigin(this.crossOrigin);
-            for(let i319 = 0, il = json.length; i319 < il; i319++){
-                const image = json[i319];
+            for(let i320 = 0, il = json.length; i320 < il; i320++){
+                const image = json[i320];
                 const url = image.url;
                 if (Array.isArray(url)) {
                     // load array of images e.g CubeTexture
@@ -25292,8 +25392,8 @@ class ObjectLoader extends Loader {
         if (json !== undefined && json.length > 0) {
             loader = new ImageLoader(this.manager);
             loader.setCrossOrigin(this.crossOrigin);
-            for(let i320 = 0, il = json.length; i320 < il; i320++){
-                const image = json[i320];
+            for(let i321 = 0, il = json.length; i321 < il; i321++){
+                const image = json[i321];
                 const url = image.url;
                 if (Array.isArray(url)) {
                     // load array of images e.g CubeTexture
@@ -25324,8 +25424,8 @@ class ObjectLoader extends Loader {
             return type[value];
         }
         const textures = {};
-        if (json !== undefined) for(let i321 = 0, l = json.length; i321 < l; i321++){
-            const data = json[i321];
+        if (json !== undefined) for(let i322 = 0, l = json.length; i322 < l; i322++){
+            const data = json[i322];
             if (data.image === undefined) console.warn('THREE.ObjectLoader: No "image" specified for', data.uuid);
             if (images[data.image] === undefined) console.warn('THREE.ObjectLoader: Undefined image', data.image);
             const source = images[data.image];
@@ -25375,8 +25475,8 @@ class ObjectLoader extends Loader {
             if (name === undefined) return undefined;
             if (Array.isArray(name)) {
                 const array = [];
-                for(let i322 = 0, l = name.length; i322 < l; i322++){
-                    const uuid = name[i322];
+                for(let i323 = 0, l = name.length; i323 < l; i323++){
+                    const uuid = name[i323];
                     if (materials[uuid] === undefined) console.warn('THREE.ObjectLoader: Undefined material', uuid);
                     array.push(materials[uuid]);
                 }
@@ -25516,12 +25616,12 @@ class ObjectLoader extends Loader {
         if (data.layers !== undefined) object.layers.mask = data.layers;
         if (data.children !== undefined) {
             const children = data.children;
-            for(let i323 = 0; i323 < children.length; i323++)object.add(this.parseObject(children[i323], geometries, materials, textures, animations));
+            for(let i324 = 0; i324 < children.length; i324++)object.add(this.parseObject(children[i324], geometries, materials, textures, animations));
         }
         if (data.animations !== undefined) {
             const objectAnimations = data.animations;
-            for(let i324 = 0; i324 < objectAnimations.length; i324++){
-                const uuid = objectAnimations[i324];
+            for(let i325 = 0; i325 < objectAnimations.length; i325++){
+                const uuid = objectAnimations[i325];
                 object.animations.push(animations[uuid]);
             }
         }
@@ -25968,7 +26068,7 @@ class Audio extends Object3D {
     connect() {
         if (this.filters.length > 0) {
             this.source.connect(this.filters[0]);
-            for(let i325 = 1, l = this.filters.length; i325 < l; i325++)this.filters[i325 - 1].connect(this.filters[i325]);
+            for(let i326 = 1, l = this.filters.length; i326 < l; i326++)this.filters[i326 - 1].connect(this.filters[i326]);
             this.filters[this.filters.length - 1].connect(this.getOutput());
         } else this.source.connect(this.getOutput());
         this._connected = true;
@@ -25977,7 +26077,7 @@ class Audio extends Object3D {
     disconnect() {
         if (this.filters.length > 0) {
             this.source.disconnect(this.filters[0]);
-            for(let i326 = 1, l = this.filters.length; i326 < l; i326++)this.filters[i326 - 1].disconnect(this.filters[i326]);
+            for(let i327 = 1, l = this.filters.length; i327 < l; i327++)this.filters[i327 - 1].disconnect(this.filters[i327]);
             this.filters[this.filters.length - 1].disconnect(this.getOutput());
         } else this.source.disconnect(this.getOutput());
         this._connected = false;
@@ -26146,7 +26246,7 @@ class AudioAnalyser {
     getAverageFrequency() {
         let value = 0;
         const data = this.getFrequencyData();
-        for(let i327 = 0; i327 < data.length; i327++)value += data[i327];
+        for(let i328 = 0; i328 < data.length; i328++)value += data[i328];
         return value / data.length;
     }
 }
@@ -26211,7 +26311,7 @@ class PropertyMixer {
         let currentWeight = this.cumulativeWeight;
         if (currentWeight === 0) {
             // accuN := incoming * weight
-            for(let i328 = 0; i328 !== stride; ++i328)buffer[offset + i328] = buffer[i328];
+            for(let i329 = 0; i329 !== stride; ++i329)buffer[offset + i329] = buffer[i329];
             currentWeight = weight;
         } else {
             // accuN := accuN + incoming * weight
@@ -26242,7 +26342,7 @@ class PropertyMixer {
         }
         if (weightAdditive > 0) // accuN := accuN + additive accuN
         this._mixBufferRegionAdditive(buffer, offset, this._addIndex * stride, 1, stride);
-        for(let i329 = stride, e = stride + stride; i329 !== e; ++i329)if (buffer[i329] !== buffer[i329 + stride]) {
+        for(let i330 = stride, e = stride + stride; i330 !== e; ++i330)if (buffer[i330] !== buffer[i330 + stride]) {
             // value has changed -> update scene graph
             binding.setValue(buffer, offset);
             break;
@@ -26254,7 +26354,7 @@ class PropertyMixer {
         const buffer = this.buffer, stride = this.valueSize, originalValueOffset = stride * this._origIndex;
         binding.getValue(buffer, originalValueOffset);
         // accu[0..1] := orig -- initially detect changes against the original
-        for(let i330 = stride, e = originalValueOffset; i330 !== e; ++i330)buffer[i330] = buffer[originalValueOffset + i330 % stride];
+        for(let i331 = stride, e = originalValueOffset; i331 !== e; ++i331)buffer[i331] = buffer[originalValueOffset + i331 % stride];
         // Add to identity for additive
         this._setIdentity();
         this.cumulativeWeight = 0;
@@ -26268,7 +26368,7 @@ class PropertyMixer {
     _setAdditiveIdentityNumeric() {
         const startIndex = this._addIndex * this.valueSize;
         const endIndex = startIndex + this.valueSize;
-        for(let i331 = startIndex; i331 < endIndex; i331++)this.buffer[i331] = 0;
+        for(let i332 = startIndex; i332 < endIndex; i332++)this.buffer[i332] = 0;
     }
     _setAdditiveIdentityQuaternion() {
         this._setAdditiveIdentityNumeric();
@@ -26277,11 +26377,11 @@ class PropertyMixer {
     _setAdditiveIdentityOther() {
         const startIndex = this._origIndex * this.valueSize;
         const targetIndex = this._addIndex * this.valueSize;
-        for(let i332 = 0; i332 < this.valueSize; i332++)this.buffer[targetIndex + i332] = this.buffer[startIndex + i332];
+        for(let i333 = 0; i333 < this.valueSize; i333++)this.buffer[targetIndex + i333] = this.buffer[startIndex + i333];
     }
     // mix functions
     _select(buffer, dstOffset, srcOffset, t, stride) {
-        if (t >= 0.5) for(let i333 = 0; i333 !== stride; ++i333)buffer[dstOffset + i333] = buffer[srcOffset + i333];
+        if (t >= 0.5) for(let i334 = 0; i334 !== stride; ++i334)buffer[dstOffset + i334] = buffer[srcOffset + i334];
     }
     _slerp(buffer, dstOffset, srcOffset, t) {
         Quaternion.slerpFlat(buffer, dstOffset, buffer, dstOffset, buffer, srcOffset, t);
@@ -26295,15 +26395,15 @@ class PropertyMixer {
     }
     _lerp(buffer, dstOffset, srcOffset, t, stride) {
         const s = 1 - t;
-        for(let i334 = 0; i334 !== stride; ++i334){
-            const j = dstOffset + i334;
-            buffer[j] = buffer[j] * s + buffer[srcOffset + i334] * t;
+        for(let i335 = 0; i335 !== stride; ++i335){
+            const j = dstOffset + i335;
+            buffer[j] = buffer[j] * s + buffer[srcOffset + i335] * t;
         }
     }
     _lerpAdditive(buffer, dstOffset, srcOffset, t, stride) {
-        for(let i335 = 0; i335 !== stride; ++i335){
-            const j = dstOffset + i335;
-            buffer[j] = buffer[j] + buffer[srcOffset + i335] * t;
+        for(let i336 = 0; i336 !== stride; ++i336){
+            const j = dstOffset + i336;
+            buffer[j] = buffer[j] + buffer[srcOffset + i336] * t;
         }
     }
 }
@@ -26346,15 +26446,15 @@ class Composite {
     }
     setValue(array, offset) {
         const bindings = this._bindings;
-        for(let i336 = this._targetGroup.nCachedObjects_, n = bindings.length; i336 !== n; ++i336)bindings[i336].setValue(array, offset);
+        for(let i337 = this._targetGroup.nCachedObjects_, n = bindings.length; i337 !== n; ++i337)bindings[i337].setValue(array, offset);
     }
     bind() {
         const bindings = this._bindings;
-        for(let i337 = this._targetGroup.nCachedObjects_, n = bindings.length; i337 !== n; ++i337)bindings[i337].bind();
+        for(let i338 = this._targetGroup.nCachedObjects_, n = bindings.length; i338 !== n; ++i338)bindings[i338].bind();
     }
     unbind() {
         const bindings = this._bindings;
-        for(let i338 = this._targetGroup.nCachedObjects_, n = bindings.length; i338 !== n; ++i338)bindings[i338].unbind();
+        for(let i339 = this._targetGroup.nCachedObjects_, n = bindings.length; i339 !== n; ++i339)bindings[i339].unbind();
     }
 }
 // Note: This class uses a State pattern on a per-method basis:
@@ -26421,8 +26521,8 @@ class PropertyBinding {
         // search into node subtree.
         if (root.children) {
             const searchNodeSubtree = function(children) {
-                for(let i339 = 0; i339 < children.length; i339++){
-                    const childNode = children[i339];
+                for(let i340 = 0; i340 < children.length; i340++){
+                    const childNode = children[i340];
                     if (childNode.name === nodeName || childNode.uuid === nodeName) return childNode;
                     const result = searchNodeSubtree(childNode.children);
                     if (result) return result;
@@ -26443,7 +26543,7 @@ class PropertyBinding {
     }
     _getValue_array(buffer, offset) {
         const source = this.resolvedProperty;
-        for(let i340 = 0, n = source.length; i340 !== n; ++i340)buffer[offset++] = source[i340];
+        for(let i341 = 0, n = source.length; i341 !== n; ++i341)buffer[offset++] = source[i341];
     }
     _getValue_arrayElement(buffer, offset) {
         buffer[offset] = this.resolvedProperty[this.propertyIndex];
@@ -26466,16 +26566,16 @@ class PropertyBinding {
     // EntireArray
     _setValue_array(buffer, offset) {
         const dest = this.resolvedProperty;
-        for(let i341 = 0, n = dest.length; i341 !== n; ++i341)dest[i341] = buffer[offset++];
+        for(let i342 = 0, n = dest.length; i342 !== n; ++i342)dest[i342] = buffer[offset++];
     }
     _setValue_array_setNeedsUpdate(buffer, offset) {
         const dest = this.resolvedProperty;
-        for(let i342 = 0, n = dest.length; i342 !== n; ++i342)dest[i342] = buffer[offset++];
+        for(let i343 = 0, n = dest.length; i343 !== n; ++i343)dest[i343] = buffer[offset++];
         this.targetObject.needsUpdate = true;
     }
     _setValue_array_setMatrixWorldNeedsUpdate(buffer, offset) {
         const dest = this.resolvedProperty;
-        for(let i343 = 0, n = dest.length; i343 !== n; ++i343)dest[i343] = buffer[offset++];
+        for(let i344 = 0, n = dest.length; i344 !== n; ++i344)dest[i344] = buffer[offset++];
         this.targetObject.matrixWorldNeedsUpdate = true;
     }
     // ArrayElement
@@ -26553,8 +26653,8 @@ class PropertyBinding {
                     // and convert the integer string to a true integer.
                     targetObject = targetObject.skeleton.bones;
                     // support resolving morphTarget names into indices.
-                    for(let i344 = 0; i344 < targetObject.length; i344++)if (targetObject[i344].name === objectIndex) {
-                        objectIndex = i344;
+                    for(let i345 = 0; i345 < targetObject.length; i345++)if (targetObject[i345].name === objectIndex) {
+                        objectIndex = i345;
                         break;
                     }
                     break;
@@ -26710,7 +26810,7 @@ PropertyBinding.prototype.SetterByBindingTypeAndVersioning = [
         // note: read by PropertyBinding.Composite
         const indices = {};
         this._indicesByUUID = indices; // for bookkeeping
-        for(let i345 = 0, n = arguments.length; i345 !== n; ++i345)indices[arguments[i345].uuid] = i345;
+        for(let i346 = 0, n = arguments.length; i346 !== n; ++i346)indices[arguments[i346].uuid] = i346;
         this._paths = []; // inside: string
         this._parsedPaths = []; // inside: { we don't care, here }
         this._bindings = []; // inside: Array< PropertyBinding >
@@ -26733,8 +26833,8 @@ PropertyBinding.prototype.SetterByBindingTypeAndVersioning = [
     add() {
         const objects = this._objects, indicesByUUID = this._indicesByUUID, paths = this._paths, parsedPaths = this._parsedPaths, bindings = this._bindings, nBindings = bindings.length;
         let knownObject = undefined, nObjects = objects.length, nCachedObjects = this.nCachedObjects_;
-        for(let i346 = 0, n = arguments.length; i346 !== n; ++i346){
-            const object = arguments[i346], uuid = object.uuid;
+        for(let i347 = 0, n = arguments.length; i347 !== n; ++i347){
+            const object = arguments[i347], uuid = object.uuid;
             let index = indicesByUUID[uuid];
             if (index === undefined) {
                 // unknown object -> add it to the ACTIVE region
@@ -26770,8 +26870,8 @@ PropertyBinding.prototype.SetterByBindingTypeAndVersioning = [
     remove() {
         const objects = this._objects, indicesByUUID = this._indicesByUUID, bindings = this._bindings, nBindings = bindings.length;
         let nCachedObjects = this.nCachedObjects_;
-        for(let i347 = 0, n = arguments.length; i347 !== n; ++i347){
-            const object = arguments[i347], uuid = object.uuid, index = indicesByUUID[uuid];
+        for(let i348 = 0, n = arguments.length; i348 !== n; ++i348){
+            const object = arguments[i348], uuid = object.uuid, index = indicesByUUID[uuid];
             if (index !== undefined && index >= nCachedObjects) {
                 // move existing object into the CACHED region
                 const lastCachedIndex = nCachedObjects++, firstActiveObject = objects[lastCachedIndex];
@@ -26793,8 +26893,8 @@ PropertyBinding.prototype.SetterByBindingTypeAndVersioning = [
     uncache() {
         const objects = this._objects, indicesByUUID = this._indicesByUUID, bindings = this._bindings, nBindings = bindings.length;
         let nCachedObjects = this.nCachedObjects_, nObjects = objects.length;
-        for(let i348 = 0, n = arguments.length; i348 !== n; ++i348){
-            const object = arguments[i348], uuid = object.uuid, index = indicesByUUID[uuid];
+        for(let i349 = 0, n = arguments.length; i349 !== n; ++i349){
+            const object = arguments[i349], uuid = object.uuid, index = indicesByUUID[uuid];
             if (index !== undefined) {
                 delete indicesByUUID[uuid];
                 if (index < nCachedObjects) {
@@ -26845,9 +26945,9 @@ PropertyBinding.prototype.SetterByBindingTypeAndVersioning = [
         paths.push(path);
         parsedPaths.push(parsedPath);
         bindings.push(bindingsForPath);
-        for(let i349 = nCachedObjects, n = objects.length; i349 !== n; ++i349){
-            const object = objects[i349];
-            bindingsForPath[i349] = new PropertyBinding(object, path, parsedPath);
+        for(let i350 = nCachedObjects, n = objects.length; i350 !== n; ++i350){
+            const object = objects[i350];
+            bindingsForPath[i350] = new PropertyBinding(object, path, parsedPath);
         }
         return bindingsForPath;
     }
@@ -26879,9 +26979,9 @@ class AnimationAction {
             endingStart: ZeroCurvatureEnding,
             endingEnd: ZeroCurvatureEnding
         };
-        for(let i350 = 0; i350 !== nTracks; ++i350){
-            const interpolant = tracks[i350].createInterpolant(null);
-            interpolants[i350] = interpolant;
+        for(let i351 = 0; i351 !== nTracks; ++i351){
+            const interpolant = tracks[i351].createInterpolant(null);
+            interpolants[i351] = interpolant;
             interpolant.settings = interpolantSettings;
         }
         this._interpolantSettings = interpolantSettings;
@@ -27247,14 +27347,14 @@ class AnimationMixer extends EventDispatcher {
             bindingsByName = {};
             bindingsByRoot[rootUuid] = bindingsByName;
         }
-        for(let i351 = 0; i351 !== nTracks; ++i351){
-            const track = tracks[i351], trackName = track.name;
+        for(let i352 = 0; i352 !== nTracks; ++i352){
+            const track = tracks[i352], trackName = track.name;
             let binding = bindingsByName[trackName];
             if (binding !== undefined) {
                 ++binding.referenceCount;
-                bindings[i351] = binding;
+                bindings[i352] = binding;
             } else {
-                binding = bindings[i351];
+                binding = bindings[i352];
                 if (binding !== undefined) {
                     // existing binding, make sure the cache knows
                     if (binding._cacheIndex === null) {
@@ -27263,13 +27363,13 @@ class AnimationMixer extends EventDispatcher {
                     }
                     continue;
                 }
-                const path = prototypeAction && prototypeAction._propertyBindings[i351].binding.parsedPath;
+                const path = prototypeAction && prototypeAction._propertyBindings[i352].binding.parsedPath;
                 binding = new PropertyMixer(PropertyBinding.create(root, trackName, path), track.ValueTypeName, track.getValueSize());
                 ++binding.referenceCount;
                 this._addInactiveBinding(binding, rootUuid, trackName);
-                bindings[i351] = binding;
+                bindings[i352] = binding;
             }
-            interpolants[i351].resultBuffer = binding.buffer;
+            interpolants[i352].resultBuffer = binding.buffer;
         }
     }
     _activateAction(action) {
@@ -27283,8 +27383,8 @@ class AnimationMixer extends EventDispatcher {
             }
             const bindings = action._propertyBindings;
             // increment reference counts / sort out state
-            for(let i352 = 0, n = bindings.length; i352 !== n; ++i352){
-                const binding = bindings[i352];
+            for(let i353 = 0, n = bindings.length; i353 !== n; ++i353){
+                const binding = bindings[i353];
                 if ((binding.useCount++) === 0) {
                     this._lendBinding(binding);
                     binding.saveOriginalState();
@@ -27297,8 +27397,8 @@ class AnimationMixer extends EventDispatcher {
         if (this._isActiveAction(action)) {
             const bindings = action._propertyBindings;
             // decrement reference counts / sort out state
-            for(let i353 = 0, n = bindings.length; i353 !== n; ++i353){
-                const binding = bindings[i353];
+            for(let i354 = 0, n = bindings.length; i354 !== n; ++i354){
+                const binding = bindings[i354];
                 if (--binding.useCount === 0) {
                     binding.restoreOriginalState();
                     this._takeBackBinding(binding);
@@ -27394,8 +27494,8 @@ class AnimationMixer extends EventDispatcher {
     }
     _removeInactiveBindingsForAction(action) {
         const bindings = action._propertyBindings;
-        for(let i354 = 0, n = bindings.length; i354 !== n; ++i354){
-            const binding = bindings[i354];
+        for(let i355 = 0, n = bindings.length; i355 !== n; ++i355){
+            const binding = bindings[i355];
             if (--binding.referenceCount === 0) this._removeInactiveBinding(binding);
         }
     }
@@ -27515,7 +27615,7 @@ class AnimationMixer extends EventDispatcher {
     // deactivates all previously scheduled actions
     stopAllAction() {
         const actions = this._actions, nActions = this._nActiveActions;
-        for(let i355 = nActions - 1; i355 >= 0; --i355)actions[i355].stop();
+        for(let i356 = nActions - 1; i356 >= 0; --i356)actions[i356].stop();
         return this;
     }
     // advance the time and update apply the animation
@@ -27523,19 +27623,19 @@ class AnimationMixer extends EventDispatcher {
         deltaTime *= this.timeScale;
         const actions = this._actions, nActions = this._nActiveActions, time = this.time += deltaTime, timeDirection = Math.sign(deltaTime), accuIndex = this._accuIndex ^= 1;
         // run active actions
-        for(let i357 = 0; i357 !== nActions; ++i357){
-            const action = actions[i357];
+        for(let i358 = 0; i358 !== nActions; ++i358){
+            const action = actions[i358];
             action._update(time, deltaTime, timeDirection, accuIndex);
         }
         // update scene graph
         const bindings = this._bindings, nBindings = this._nActiveBindings;
-        for(let i356 = 0; i356 !== nBindings; ++i356)bindings[i356].apply(accuIndex);
+        for(let i357 = 0; i357 !== nBindings; ++i357)bindings[i357].apply(accuIndex);
         return this;
     }
     // Allows you to seek to a specific time in an animation.
     setTime(timeInSeconds) {
         this.time = 0; // Zero out time attribute for AnimationMixer object;
-        for(let i358 = 0; i358 < this._actions.length; i358++)this._actions[i358].time = 0; // Zero out time attribute for all associated AnimationAction objects.
+        for(let i359 = 0; i359 < this._actions.length; i359++)this._actions[i359].time = 0; // Zero out time attribute for all associated AnimationAction objects.
         return this.update(timeInSeconds); // Update used to set exact time. Returns "this" AnimationMixer object.
     }
     // return this mixer's root target object
@@ -27550,8 +27650,8 @@ class AnimationMixer extends EventDispatcher {
             // iteration state and also require updating the state we can
             // just throw away
             const actionsToRemove = actionsForClip.knownActions;
-            for(let i359 = 0, n = actionsToRemove.length; i359 !== n; ++i359){
-                const action = actionsToRemove[i359];
+            for(let i360 = 0, n = actionsToRemove.length; i360 !== n; ++i360){
+                const action = actionsToRemove[i360];
                 this._deactivateAction(action);
                 const cacheIndex = action._cacheIndex, lastInactiveAction = actions[actions.length - 1];
                 action._cacheIndex = null;
@@ -27698,7 +27798,7 @@ class Raycaster {
         return intersects8;
     }
     intersectObjects(objects, recursive = true, intersects9 = []) {
-        for(let i360 = 0, l = objects.length; i360 < l; i360++)intersectObject(objects[i360], this, intersects9, recursive);
+        for(let i361 = 0, l = objects.length; i361 < l; i361++)intersectObject(objects[i361], this, intersects9, recursive);
         intersects9.sort(ascSort);
         return intersects9;
     }
@@ -27710,7 +27810,7 @@ function intersectObject(object, raycaster, intersects10, recursive) {
     if (object.layers.test(raycaster.layers)) object.raycast(raycaster, intersects10);
     if (recursive === true) {
         const children = object.children;
-        for(let i361 = 0, l = children.length; i361 < l; i361++)intersectObject(children[i361], raycaster, intersects10, true);
+        for(let i362 = 0, l = children.length; i362 < l; i362++)intersectObject(children[i362], raycaster, intersects10, true);
     }
 }
 /**
@@ -27808,7 +27908,7 @@ class Box2 {
     }
     setFromPoints(points) {
         this.makeEmpty();
-        for(let i362 = 0, il = points.length; i362 < il; i362++)this.expandByPoint(points[i362]);
+        for(let i363 = 0, il = points.length; i363 < il; i363++)this.expandByPoint(points[i363]);
         return this;
     }
     setFromCenterAndSize(center, size) {
@@ -27996,8 +28096,8 @@ class SpotLightHelper extends Object3D {
             -1,
             1
         ];
-        for(let i363 = 0, j = 1, l = 32; i363 < l; i363++, j++){
-            const p1 = i363 / l * Math.PI * 2;
+        for(let i364 = 0, j = 1, l = 32; i364 < l; i364++, j++){
+            const p1 = i364 / l * Math.PI * 2;
             const p2 = j / l * Math.PI * 2;
             positions.push(Math.cos(p1), Math.sin(p1), 1, Math.cos(p2), Math.sin(p2), 1);
         }
@@ -28036,8 +28136,8 @@ class SkeletonHelper extends LineSegments {
         const colors = [];
         const color1 = new Color(0, 0, 1);
         const color2 = new Color(0, 1, 0);
-        for(let i364 = 0; i364 < bones.length; i364++){
-            const bone = bones[i364];
+        for(let i365 = 0; i365 < bones.length; i365++){
+            const bone = bones[i365];
             if (bone.parent && bone.parent.isBone) {
                 vertices.push(0, 0, 0);
                 vertices.push(0, 0, 0);
@@ -28067,8 +28167,8 @@ class SkeletonHelper extends LineSegments {
         const geometry = this.geometry;
         const position = geometry.getAttribute('position');
         _matrixWorldInv.copy(this.root.matrixWorld).invert();
-        for(let i365 = 0, j = 0; i365 < bones.length; i365++){
-            const bone = bones[i365];
+        for(let i366 = 0, j = 0; i366 < bones.length; i366++){
+            const bone = bones[i366];
             if (bone.parent && bone.parent.isBone) {
                 _boneMatrix.multiplyMatrices(_matrixWorldInv, bone.matrixWorld);
                 _vector$2.setFromMatrixPosition(_boneMatrix);
@@ -28086,7 +28186,7 @@ class SkeletonHelper extends LineSegments {
 function getBoneList(object) {
     const boneList = [];
     if (object.isBone === true) boneList.push(object);
-    for(let i366 = 0; i366 < object.children.length; i366++)boneList.push.apply(boneList, getBoneList(object.children[i366]));
+    for(let i367 = 0; i367 < object.children.length; i367++)boneList.push.apply(boneList, getBoneList(object.children[i367]));
     return boneList;
 }
 class PointLightHelper extends Mesh {
@@ -28185,9 +28285,9 @@ class HemisphereLightHelper extends Object3D {
             const colors = mesh.geometry.getAttribute('color');
             _color1.copy(this.light.color);
             _color2.copy(this.light.groundColor);
-            for(let i367 = 0, l = colors.count; i367 < l; i367++){
-                const color = i367 < l / 2 ? _color1 : _color2;
-                colors.setXYZ(i367, color.r, color.g, color.b);
+            for(let i368 = 0, l = colors.count; i368 < l; i368++){
+                const color = i368 < l / 2 ? _color1 : _color2;
+                colors.setXYZ(i368, color.r, color.g, color.b);
             }
             colors.needsUpdate = true;
         }
@@ -28202,10 +28302,10 @@ class GridHelper extends LineSegments {
         const step = size / divisions;
         const halfSize = size / 2;
         const vertices = [], colors = [];
-        for(let i368 = 0, j = 0, k = -halfSize; i368 <= divisions; i368++, k += step){
+        for(let i369 = 0, j = 0, k = -halfSize; i369 <= divisions; i369++, k += step){
             vertices.push(-halfSize, 0, k, halfSize, 0, k);
             vertices.push(k, 0, -halfSize, k, 0, halfSize);
-            const color = i368 === center ? color1 : color2;
+            const color = i369 === center ? color1 : color2;
             color.toArray(colors, j);
             j += 3;
             color.toArray(colors, j);
@@ -28233,20 +28333,20 @@ class PolarGridHelper extends LineSegments {
         const vertices = [];
         const colors = [];
         // create the radials
-        for(let i370 = 0; i370 <= radials; i370++){
-            const v = i370 / radials * (Math.PI * 2);
+        for(let i371 = 0; i371 <= radials; i371++){
+            const v = i371 / radials * (Math.PI * 2);
             const x = Math.sin(v) * radius;
             const z = Math.cos(v) * radius;
             vertices.push(0, 0, 0);
             vertices.push(x, 0, z);
-            const color = i370 & 1 ? color1 : color2;
+            const color = i371 & 1 ? color1 : color2;
             colors.push(color.r, color.g, color.b);
             colors.push(color.r, color.g, color.b);
         }
         // create the circles
-        for(let i369 = 0; i369 <= circles; i369++){
-            const color = i369 & 1 ? color1 : color2;
-            const r = radius - radius / circles * i369;
+        for(let i370 = 0; i370 <= circles; i370++){
+            const color = i370 & 1 ? color1 : color2;
+            const r = radius - radius / circles * i370;
             for(let j = 0; j < divisions; j++){
                 // first vertex
                 let v = j / divisions * (Math.PI * 2);
@@ -28466,7 +28566,7 @@ function setPoint(point, pointMap, geometry, camera, x, y, z) {
     const points = pointMap[point];
     if (points !== undefined) {
         const position = geometry.getAttribute('position');
-        for(let i371 = 0, l = points.length; i371 < l; i371++)position.setXYZ(points[i371], _vector.x, _vector.y, _vector.z);
+        for(let i372 = 0, l = points.length; i372 < l; i372++)position.setXYZ(points[i372], _vector.x, _vector.y, _vector.z);
     }
 }
 const _box = /*@__PURE__*/ new Box3();
@@ -28898,8 +28998,8 @@ class ShapePath {
     toShapes(isCCW, noHoles) {
         function toShapesNoHoles(inSubpaths) {
             const shapes = [];
-            for(let i374 = 0, l = inSubpaths.length; i374 < l; i374++){
-                const tmpPath = inSubpaths[i374];
+            for(let i375 = 0, l = inSubpaths.length; i375 < l; i375++){
+                const tmpPath = inSubpaths[i375];
                 const tmpShape = new Shape();
                 tmpShape.curves = tmpPath.curves;
                 shapes.push(tmpShape);
@@ -28969,8 +29069,8 @@ class ShapePath {
         let tmpPoints;
         newShapes[mainIdx] = undefined;
         newShapeHoles[mainIdx] = [];
-        for(let i373 = 0, l6 = subPaths.length; i373 < l6; i373++){
-            tmpPath1 = subPaths[i373];
+        for(let i374 = 0, l6 = subPaths.length; i374 < l6; i374++){
+            tmpPath1 = subPaths[i374];
             tmpPoints = tmpPath1.getPoints();
             solid = isClockWise(tmpPoints);
             solid = isCCW ? !solid : solid;
@@ -29013,10 +29113,10 @@ class ShapePath {
             if (toChange > 0 && ambiguous === false) newShapeHoles = betterShapeHoles;
         }
         let tmpHoles;
-        for(let i372 = 0, il = newShapes.length; i372 < il; i372++){
-            tmpShape1 = newShapes[i372].s;
+        for(let i373 = 0, il = newShapes.length; i373 < il; i373++){
+            tmpShape1 = newShapes[i373].s;
             shapes1.push(tmpShape1);
-            tmpHoles = newShapeHoles[i372];
+            tmpHoles = newShapeHoles[i373];
             for(let j = 0, jl = tmpHoles.length; j < jl; j++)tmpShape1.holes.push(tmpHoles[j].h);
         }
         //console.log("shape", shapes);
