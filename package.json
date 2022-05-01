@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "A projet for Computer graphics and visualisations (CGV) to develop a 3D game in three.js",
   "main": "index.js",
-  "source": "threejs_test/index.html",
+  "source": "the_game/index.html",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "parcel",
@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/CiaranOtter/CGV_game_project#readme",
   "dependencies": {
+    "fs": "^0.0.1-security",
     "parcel": "^2.5.0",
     "three": "^0.139.2"
   }
