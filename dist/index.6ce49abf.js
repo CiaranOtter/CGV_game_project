@@ -142,7 +142,7 @@
       this[globalName] = mainExports;
     }
   }
-})({"9x1j5":[function(require,module,exports) {
+})({"lMQZ9":[function(require,module,exports) {
 "use strict";
 var HMR_HOST = null;
 var HMR_PORT = null;
@@ -526,6 +526,12 @@ function hmrAcceptRun(bundle, id) {
 }
 
 },{}],"8YfsX":[function(require,module,exports) {
+window.openMenu = function openMenu() {
+    document.getElementById("optMenu").style.width = "100%";
+};
+window.closeMenu = function closeMenu() {
+    document.getElementById("optMenu").style.width = "0";
+};
 const THREE = require("three");
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -30346,6 +30352,6 @@ exports.export = function(dest, destName, get) {
     });
 };
 
-},{}]},["9x1j5","8YfsX"], "8YfsX", "parcelRequiread0f")
+},{}]},["lMQZ9","8YfsX"], "8YfsX", "parcelRequiread0f")
 
 //# sourceMappingURL=index.6ce49abf.js.map
