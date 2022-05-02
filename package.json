@@ -22,8 +22,9 @@
   },
   "homepage": "https://github.com/CiaranOtter/CGV_game_project#readme",
   "dependencies": {
-    "fs": "^0.0.1-security",
-    "parcel": "^2.5.0",
-    "three": "^0.139.2"
+    "parcel": "^2.5.0"
+  },
+  "devDependencies": {
+    "three": "^0.140.0"
   }
 }
