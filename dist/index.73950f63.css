@@ -1,0 +1,63 @@
+body {
+  color: #efefef;
+  height: 100%;
+  width: 100%;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.img {
+  height: 100%;
+  width: 100%;
+  opacity: .5;
+  background-image: url("startMenu.68e8a43b.jpg");
+}
+
+.btn {
+  text-align: center;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background-color: #262626;
+  border: 1px solid #0000;
+  border-radius: 10px;
+  outline: none;
+  margin: 25px 30px;
+  padding: 25px 80px;
+  font-weight: 700;
+  transition-duration: .4s;
+  position: relative;
+}
+
+button {
+  appearance: none;
+  cursor: pointer;
+  color: #fff;
+  background-color: #2aba8f;
+  border: 2px solid #94ec19;
+  border-radius: 50px;
+  outline: none;
+  padding: 15px 50px;
+  font-size: 1.5em;
+  text-decoration: none;
+  transition-duration: .4s;
+  display: inline-block;
+}
+
+button:hover {
+  background-color: #7bc405;
+  font-size: 1.6em;
+}
+
+.screen {
+  height: 200px;
+  width: 250px;
+  text-align: center;
+  margin-top: -100px;
+  margin-left: -100px;
+  padding: 20px;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+}
+
+/*# sourceMappingURL=index.73950f63.css.map */
