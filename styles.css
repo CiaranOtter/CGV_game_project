@@ -1,0 +1,44 @@
+body {
+    font-family: 'Courier New', Courier, monospace;
+    background-color: black;
+}
+
+.options {
+    height: 100%;
+    width: 0;
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    left: 0;
+    background-color: #0000;
+    overflow-x: hidden;
+    transition: 0.5s;
+    padding-top: 60px;
+    text-align:center;
+}
+
+.options a {
+    padding: 8px 8px 8px 32px;
+    text-decoration: none;
+    font-size: 25px;
+    color: white;
+    display: block;
+    transition: 0.3s;
+}
+
+.options a:hover{
+    color: #f1f1f1;
+}
+
+.options .closebtn {
+    position: absolute;
+    top: 0;
+    right: 25px;
+    font-size: 36px;
+    margin-left: 50px;
+}
+
+@media screen and (max-height: 450px) {
+    .options {padding-top: 15px;}
+    .options a {font-size: 18px;}
+}

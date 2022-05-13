@@ -23,17 +23,27 @@ let jumpSpeed = 0.05;
 renderer.setSize(window.innerWidth, window.innerHeight)
 document.body.append(renderer.domElement);
 
+const loader = new THREE.TextureLoader();
 const geometry = new THREE.BoxGeometry();
-const material = new THREE.MeshBasicMaterial( { color:  0x00ff00} );
-const cube = new THREE.Mesh(geometry, material);
-scene.add( cube );
+loader.load('./textures/wall.jpg', (texture) => {
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
+    });
+    const cube = new THREE.Mesh(geometry, material);
+    scene.add( cube );
+    console.log("texture loaded")
+});
+
+
+
+
 
 camera.position.z = 5;
 
 function animate() {
     requestAnimationFrame( animate );
-    cube.rotation.x += 0.01;
-    cube.rotation.y += 0.01;
+    // cube.rotation.x += 0.01;
+    // cube.rotation.y += 0.01;
     if (Downpressed) {
         camera.position.z += 0.05
     }
