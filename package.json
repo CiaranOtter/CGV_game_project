@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "A projet for Computer graphics and visualisations (CGV) to develop a 3D game in three.js",
   "main": "index.js",
-  "source": "the_game/index.html",
+  "source": "index.html",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "parcel",
