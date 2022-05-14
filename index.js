@@ -1,6 +1,6 @@
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.118/build/three.module.js';
-import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.118/examples/jsm/controls/OrbitControls.js';
+const three = require("three")
+import {OrbitControls} from 'three';
 
 window.openMenu = function openMenu() {
     document.getElementById("optMenu").style.width = "100%";
