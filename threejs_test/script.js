@@ -1,3 +1,6 @@
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'; 
+
 function hide(x, y, z, w) {
     x.style.display = 'none';
     y.style.display = 'none';
