@@ -47,10 +47,10 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight)
 document.body.append(renderer.domElement);
 
-//const geometry = new THREE.BoxGeometry();
-//const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-//const cube = new THREE.Mesh(geometry, material);
-//scene.add(cube);
+const geometry = new THREE.BoxGeometry();
+const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+const cube = new THREE.Mesh(geometry, material);
+scene.add(cube);
 
 camera.position.set(0, 1, 2);
 scene.add(camera)
