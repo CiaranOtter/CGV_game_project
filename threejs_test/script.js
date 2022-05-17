@@ -1,6 +1,5 @@
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'; 
-
+import * as THREE from '../node_modules/three/build/three.module.js'
+import { GLTFLoader } from '../node_modules/three/examples/jsm/loaders/GLTFLoader.js';
 function hide(x, y, z, w) {
     x.style.display = 'none';
     y.style.display = 'none';
@@ -48,13 +47,38 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight)
 document.body.append(renderer.domElement);
 
-const geometry = new THREE.BoxGeometry();
-const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-const cube = new THREE.Mesh(geometry, material);
-scene.add(cube);
+//const geometry = new THREE.BoxGeometry();
+//const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+//const cube = new THREE.Mesh(geometry, material);
+//scene.add(cube);
 
-camera.position.z = 5;
+camera.position.set(0, 1, 2);
+scene.add(camera)
+const loader = new GLTFLoader();
 
+loader.load(
+    // resource URL
+    './scene/floor.glb',
+    // called when the resource is loaded
+    function (glb) {
+        console.log(glb)
+        const root = glb.scene
+        scene.add(root);
+
+    },
+    // called while loading is progressing
+    function (xhr) {
+
+        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+
+    },
+    // called when loading has errors
+    function (error) {
+
+        console.log('An error happened');
+
+    }
+);
 function animate() {
     requestAnimationFrame(animate);
     cube.rotation.x += 0.01;
