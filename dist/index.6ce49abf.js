@@ -538,6 +538,12 @@ const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerH
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.append(renderer.domElement);
+//const geo = new THREE.PlaneGeometry( 100, 100, 1, 1 );
+//const texture = new THREE.TextureLoader().load( require("./textures/woodFloor.jpg") );
+//const mat = new THREE.MeshBasicMaterial( {map: texture, side: THREE.DoubleSide} );
+//const plane = new THREE.Mesh(geo, mat);
+//plane.rotation.x = 90;
+//scene.add(plane);
 const geometry = new THREE.BoxGeometry();
 const material = new THREE.MeshBasicMaterial({
     color: 0x00ff00
