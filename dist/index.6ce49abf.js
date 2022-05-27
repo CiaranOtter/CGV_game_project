@@ -528,33 +528,46 @@ function hmrAcceptRun(bundle, id) {
 },{}],"8YfsX":[function(require,module,exports) {
 var _threeModuleJs = require("../node_modules/three/build/three.module.js");
 var _gltfloaderJs = require("../node_modules/three/examples/jsm/loaders/GLTFLoader.js");
-function hide(x, y, z, w) {
+function hide(x, y, z, a, b) {
     x.style.display = 'none';
     y.style.display = 'none';
     z.style.display = 'none';
+    a.style.display = 'none';
+    b.style.display = 'none';
 }
-function showScore(w) {
-    w.innerHTML;
-    w = document.getElementById('p').innerHTML = "You Won!";
-    w.style.color = 'green';
+function showMenu(a, b, c) {
+    a.style.display = 'block';
+    b.style.display = 'block';
+    c.style.display = 'block';
 }
 let btnText = document.getElementById('btnText');
 let btnText2 = document.getElementById('btnText2');
 let btnText3 = document.getElementById('btnText3');
-let score = document.getElementById('p').innerHTML;
+let title = document.getElementById('h1');
+let subTitle = document.getElementById('h2');
 btnText.addEventListener('click', ()=>{
-    hide(btnText, btnText2, btnText3);
+    hide(btnText, btnText2, btnText3, title, subTitle);
 });
 btnText2.addEventListener('click', ()=>{
-    hide(btnText, btnText2, btnText3);
-    showScore(score);
+    hide(btnText, btnText2, btnText3, title, subTitle);
+//  showScore(score);
 });
 btnText3.addEventListener('click', ()=>{
-    hide(btnText, btnText2, btnText3);
-    scene.clear();
+    // hide(btnText, btnText2, btnText3);
+    timeRefresh(btnText3);
 });
-const { BackSide  } = require("three");
-const THREE = require("three");
+let but = document.querySelector('p');
+document.body.addEventListener('keypress', function(event) {
+    if (event.key == 'Enter') {
+        btnText.innerText = "Resume";
+        showMenu(btnText, btnText2, btnText3);
+    }
+});
+function timeRefresh(a) {
+    setTimeout("location.reload(true);", a);
+}
+//const { BackSide } = require("three");
+//const THREE = require("three")
 const scene = new _threeModuleJs.Scene();
 const camera = new _threeModuleJs.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new _threeModuleJs.WebGLRenderer();
@@ -590,7 +603,7 @@ function animate() {
 }
 animate();
 
-},{"../node_modules/three/build/three.module.js":"ktPTu","../node_modules/three/examples/jsm/loaders/GLTFLoader.js":"dVRsF","three":"ktPTu"}],"ktPTu":[function(require,module,exports) {
+},{"../node_modules/three/build/three.module.js":"ktPTu","../node_modules/three/examples/jsm/loaders/GLTFLoader.js":"dVRsF"}],"ktPTu":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "ACESFilmicToneMapping", ()=>ACESFilmicToneMapping
