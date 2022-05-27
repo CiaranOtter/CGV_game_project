@@ -1,43 +1,58 @@
 import * as THREE from '../node_modules/three/build/three.module.js'
 import { GLTFLoader } from '../node_modules/three/examples/jsm/loaders/GLTFLoader.js';
-function hide(x, y, z, w) {
+function hide(x, y, z, a, b) {
     x.style.display = 'none';
     y.style.display = 'none';
     z.style.display = 'none';
+    a.style.display = 'none';
+    b.style.display = 'none';
 
 
 }
-function showScore(w) {
-    w.innerHTML;
-    w = document.getElementById('p').innerHTML = "You Won!"
-    w.style.color = 'green';
-
-
-
+function showMenu(a, b, c) {
+    a.style.display = 'block';
+    b.style.display = 'block';
+    c.style.display = 'block';
 }
 let btnText = document.getElementById('btnText');
 let btnText2 = document.getElementById('btnText2');
 let btnText3 = document.getElementById('btnText3');
-let score = document.getElementById('p').innerHTML;
-
+let title = document.getElementById('h1');
+let subTitle = document.getElementById('h2');
 btnText.addEventListener('click', () => {
-    hide(btnText, btnText2, btnText3);
+    hide(btnText, btnText2, btnText3, title, subTitle);
+
 
 });
 btnText2.addEventListener('click', () => {
 
-    hide(btnText, btnText2, btnText3);
-    showScore(score);
+    hide(btnText, btnText2, btnText3, title, subTitle);
+
+    //  showScore(score);
 
 });
 btnText3.addEventListener('click', () => {
 
-    hide(btnText, btnText2, btnText3);
-    scene.clear();
+    // hide(btnText, btnText2, btnText3);
+    timeRefresh(btnText3)
+});
+let but = document.querySelector('p');
+document.body.addEventListener('keypress', function (event) {
+    if (event.key == 'Enter') {
+        btnText.innerText = "Resume";
+        showMenu(btnText, btnText2, btnText3)
+    }
 });
 
-const { BackSide } = require("three");
-const THREE = require("three")
+function timeRefresh(a) {
+    setTimeout("location.reload(true);", a);
+}
+
+
+
+//const { BackSide } = require("three");
+//const THREE = require("three")
+
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
