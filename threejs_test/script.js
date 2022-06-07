@@ -1,7 +1,17 @@
-import * as THREE from '../node_modules/three/build/three.module.js'
-import { GLTFLoader } from '../node_modules/three/examples/jsm/loaders/GLTFLoader.js';
-function hide(x, y, z, a, b) {
+import * as THREE from './imports/three.js';
+import { GLTFLoader } from './imports/GLTFLoader.js';
+
+
+window.openMenu = function openMenu() {
+    document.getElementById("optMenu").style.width = "100%";
+}
+
+window.closeMenu = function closeMenu() {
+    document.getElementById("optMenu").style.width = "0";
+}
+function hide(x,p, y, z, a, b) {
     x.style.display = 'none';
+    p.style.display = 'none';
     y.style.display = 'none';
     z.style.display = 'none';
     a.style.display = 'none';
@@ -9,8 +19,9 @@ function hide(x, y, z, a, b) {
 
 
 }
-function showMenu(a, b, c) {
+function showMenu(a,p, b, c) {
     a.style.display = 'block';
+    p.style.display = 'block';
     b.style.display = 'block';
     c.style.display = 'block';
 }
@@ -19,14 +30,15 @@ let btnText2 = document.getElementById('btnText2');
 let btnText3 = document.getElementById('btnText3');
 let title = document.getElementById('h1');
 let subTitle = document.getElementById('h2');
+let opt = document.getElementById('optBtn');
 btnText.addEventListener('click', () => {
-    hide(btnText, btnText2, btnText3, title, subTitle);
+    hide(btnText, opt, btnText2, btnText3, title, subTitle);
 
 
 });
 btnText2.addEventListener('click', () => {
 
-    hide(btnText, btnText2, btnText3, title, subTitle);
+    hide(btnText, opt, btnText2, btnText3, title, subTitle);
 
     //  showScore(score);
 
@@ -40,7 +52,7 @@ let but = document.querySelector('p');
 document.body.addEventListener('keypress', function (event) {
     if (event.key == 'Enter') {
         btnText.innerText = "Resume";
-        showMenu(btnText, btnText2, btnText3)
+        showMenu(btnText, opt, btnText2, btnText3)
     }
 });
 
@@ -62,23 +74,24 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight)
 document.body.append(renderer.domElement);
 
-const geometry = new THREE.BoxGeometry();
-const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-const cube = new THREE.Mesh(geometry, material);
-scene.add(cube);
+//const geometry = new THREE.BoxGeometry();
+//const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+//const cube = new THREE.Mesh(geometry, material);
+//scene.add(cube);
 
 camera.position.set(0, 1, 2);
 scene.add(camera)
 const loader = new GLTFLoader();
 
+var obj;
 loader.load(
     // resource URL
-    './scene/floor.glb',
+    './scene/maze.gltf',
     // called when the resource is loaded
-    function (glb) {
-        console.log(glb)
-        const root = glb.scene
-        scene.add(root);
+    function (gltf) {
+        console.log(gltf)
+        obj = gltf.scene
+        scene.add(gltf.scene);
 
     },
     // called while loading is progressing
@@ -94,10 +107,13 @@ loader.load(
 
     }
 );
+scene.background = new THREE.Color(0xffffff);
+var light = new THREE.HemisphereLight(0xffffffff, 0X000000, 2);
+scene.add(light);
 function animate() {
     requestAnimationFrame(animate);
-    cube.rotation.x += 0.01;
-    cube.rotation.y += 0.01;
+    //cube.rotation.x += 0.01;
+    //cube.rotation.y += 0.01;
     renderer.render(scene, camera);
 }
 
