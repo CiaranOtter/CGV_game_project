@@ -1,5 +1,5 @@
-import { Camera } from "three";
-import {Sky} from "./objects/Sky";
+import { Sky } from "./objects/Sky";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
 
 // function to close and open the options menu
 window.openMenu = function openMenu() {
@@ -29,6 +29,9 @@ let Downpressed = false;
 let Uppressed = false;
 let jumping = false;
 let jumpSpeed = 0.05;
+
+const orbitControls = new OrbitControls(camera, renderer.domElement)
+orbitControls.enableDamping = true
 
 // set up the lights
 const light = new THREE.DirectionalLight( 0xffffff, 1 );
@@ -88,7 +91,79 @@ sky.material.uniforms['sunPosition'].value.copy(sun);
 
 scene.environment = pmremGenerator.fromScene(scene).texture;
 
-camera.position.set(0,75,160);
+const ambientlight = new THREE.AmbientLight(0xaaaaaa);
+scene.add(ambientlight);
+ 
+const cubeRenderTarget1 = new THREE.WebGLCubeRenderTarget(128, {
+    format: THREE.RGBFormat,
+    generateMipmaps: true,
+    minFilter: THREE.LinearMipMapLinearFilter,
+})
+const cubeRenderTarget2 = new THREE.WebGLCubeRenderTarget(128, {
+    generateMipmaps: true,
+    minFilter: THREE.LinearMipMapLinearFilter,
+})
+const cubeRenderTarget3 = new THREE.WebGLCubeRenderTarget(128, {
+    generateMipmaps: true,
+    minFilter: THREE.LinearMipMapLinearFilter,
+})
+
+const cubeCamera1 = new THREE.CubeCamera(0.1, 1000, cubeRenderTarget1);
+const cubeCamera2 = new THREE.CubeCamera(0.1, 1000, cubeRenderTarget2);
+const cubeCamera3 = new THREE.CubeCamera(0.1, 1000, cubeRenderTarget3);
+
+const pivot1 = new THREE.Object3D()
+scene.add(pivot1);
+const pivot2 = new THREE.Object3D()
+scene.add(pivot2);
+const pivot3 = new THREE.Object3D()
+scene.add(pivot3);
+
+const material1 = new THREE.MeshPhongMaterial({
+    shininess: 100,
+    color: 0xffffff,
+    specular: 0xffffff,
+    envMap: cubeRenderTarget1.texture,
+    refractionRatio: 0.5,
+    transparent: true,
+    side: THREE.BackSide,
+    combine: THREE.MixOperation
+})
+const material2 = new THREE.MeshPhongMaterial({
+    envMap: cubeRenderTarget2.texture,
+})
+const material3 = new THREE.MeshPhongMaterial({
+    envMap: cubeRenderTarget3.texture,
+})
+
+cubeRenderTarget1.texture.mapping = THREE.CubeRefractionMapping
+
+const ball1 = new THREE.Mesh(new THREE.SphereGeometry(50, 50, 50), material1)
+ball1.position.set(0, 70, 0)
+//ball1.rotation.x = 90
+ball1.castShadow = true
+ball1.receiveShadow = true
+ball1.add(cubeCamera1)
+pivot1.add(ball1)
+
+const ball2 = new THREE.Mesh(new THREE.SphereGeometry(32, 32, 32), material2)
+ball2.position.set(100, 100, 0)
+ball2.castShadow = true
+ball2.receiveShadow = true
+ball2.add(cubeCamera2)
+pivot2.add(ball2)
+
+const ball3 = new THREE.Mesh(new THREE.SphereGeometry(32, 32, 32), material3)
+ball3.position.set(-100, 100, 0)
+ball3.castShadow = true
+ball3.receiveShadow = true
+ball3.add(cubeCamera1)
+pivot3.add(ball3)
+
+camera.position.set(0,0,50);
+
+const clock = new THREE.Clock()
+
 function animate() {
     requestAnimationFrame( animate );
     //cube.rotation.x += 0.01;
@@ -119,9 +194,30 @@ function animate() {
         }
     }
     console.log(camera.position.y)
-    renderer.render( scene, camera); 
+    
+    const delta = clock.getDelta()
+
+    ball1.rotateY(-0.02 * delta)
+    pivot1.rotateY(0.2 * delta)
+    ball2.rotateY(-0.3 * delta)
+    pivot2.rotateY(0.3 * delta)
+    ball3.rotateY(-0.4 * delta)
+    pivot3.rotateY(0.4 * delta)
+
+    orbitControls.update()
+
+    render() 
 }
 
+function render() {
+
+    cubeCamera1.update(renderer, scene)
+    cubeCamera2.update(renderer, scene)
+    cubeCamera3.update(renderer, scene)
+
+    renderer.render(scene, camera)
+
+}
 document.addEventListener('keydown', (e) => {
      codeValue = e.code;
 
